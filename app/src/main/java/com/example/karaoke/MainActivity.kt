@@ -64,6 +64,8 @@ class MainActivity : AppCompatActivity() {
     private var isVocalsReady = false
     private var isAccReady = false
     private var pendingAutoPlay = false
+    private var prepareWaitSongId = -1
+    private var sseStopped = false
 
     private val syncHandler = Handler(Looper.getMainLooper())
     private val syncRunnable = object : Runnable {
@@ -124,6 +126,75 @@ class MainActivity : AppCompatActivity() {
 
     private fun streamUrl(songId: Int, kind: String): String {
         return apiV1("/playback/stream/$songId/$kind")
+    }
+
+    private fun fetchPrepareStatus(songId: Int): PrepareStatus? {
+        val request = Request.Builder()
+            .url(apiV1("/playback/songs/$songId/prepare-status"))
+            .build()
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+                val bodyStr = response.body?.string() ?: return null
+                val res = gson.fromJson(bodyStr, PrepareResponse::class.java)
+                if (res.code == 0) res.data else null
+            }
+        } catch (e: Exception) {
+            Log.e("KTV_DEBUG", "fetchPrepareStatus 出错", e)
+            null
+        }
+    }
+
+    private fun postEnsureReady(songId: Int): PrepareStatus? {
+        val request = Request.Builder()
+            .url(apiV1("/playback/songs/$songId/ensure-ready"))
+            .post(byteArrayOf().toRequestBody(null))
+            .build()
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return null
+                val bodyStr = response.body?.string() ?: return null
+                val res = gson.fromJson(bodyStr, PrepareResponse::class.java)
+                if (res.code == 0) res.data else null
+            }
+        } catch (e: Exception) {
+            Log.e("KTV_DEBUG", "postEnsureReady 出错", e)
+            null
+        }
+    }
+
+    private fun formatPrepareLabel(status: PrepareStatus?): String {
+        if (status == null) return "准备中"
+        val pct = status.progress?.toInt()?.let { " $it%" } ?: ""
+        return (status.message ?: "准备中") + pct
+    }
+
+    /** 轮询 + SSE 9 兜底，等待转码/MKV 缓存就绪。 */
+    private fun waitUntilStreamReady(songId: Int, displayName: String): Boolean {
+        prepareWaitSongId = songId
+        postEnsureReady(songId)
+        val deadline = System.currentTimeMillis() + 3_600_000L
+        while (System.currentTimeMillis() < deadline) {
+            if (prepareWaitSongId != songId) return false
+            val status = fetchPrepareStatus(songId)
+            if (status?.ready == true) {
+                prepareWaitSongId = -1
+                return true
+            }
+            if (status?.status == "failed") {
+                prepareWaitSongId = -1
+                showToast(status.error ?: "播放资源准备失败")
+                return false
+            }
+            val label = formatPrepareLabel(status)
+            runOnUiThread {
+                tvPlayingText.text = "准备中：$displayName · $label"
+            }
+            Thread.sleep(1500)
+        }
+        prepareWaitSongId = -1
+        showToast("等待播放资源超时")
+        return false
     }
 
     private fun fetchPlaybackProfile(songId: Int): PlaybackData? {
@@ -333,14 +404,29 @@ class MainActivity : AppCompatActivity() {
             showToast("无法获取播放配置")
             return
         }
-        if (!profile.can_queue || !profile.ready_to_stream) {
-            showToast("播放资源未就绪，已跳过")
+        if (!profile.can_queue) {
+            showToast("无法播放该歌曲")
             postSkipUnready(song.id)
             skipUnreadyAndContinue(autoPlay)
             return
         }
+        var activeProfile = profile
+        if (!activeProfile.ready_to_stream) {
+            if (!waitUntilStreamReady(song.id, song.name)) {
+                postSkipUnready(song.id)
+                skipUnreadyAndContinue(autoPlay)
+                return
+            }
+            activeProfile = fetchPlaybackProfile(song.id) ?: activeProfile
+            if (!activeProfile.ready_to_stream) {
+                showToast("播放资源仍未就绪")
+                postSkipUnready(song.id)
+                skipUnreadyAndContinue(autoPlay)
+                return
+            }
+        }
 
-        playbackMode = if (profile.mode == MODE_ENHANCED) MODE_ENHANCED else MODE_PLAIN
+        playbackMode = if (activeProfile.mode == MODE_ENHANCED) MODE_ENHANCED else MODE_PLAIN
         currentSongId = song.id
         val videoUrl = streamUrl(song.id, "video")
 
@@ -553,33 +639,51 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startSSE() {
-        val request = Request.Builder().url(apiV1("/events")).build()
-        sseEventSource = EventSources.createFactory(client).newEventSource(
-            request,
-            object : EventSourceListener() {
-                override fun onEvent(
-                    eventSource: EventSource,
-                    id: String?,
-                    type: String?,
-                    data: String
-                ) {
-                    try {
-                        val msg = gson.fromJson(data, SseMessage::class.java)
-                        handleSseMessage(msg)
-                    } catch (e: Exception) {
-                        Log.e("SSE", "JSON 解析失败", e)
+        connectSSE(0)
+    }
+
+    private fun connectSSE(retryDelayMs: Long) {
+        if (sseStopped) return
+        syncHandler.postDelayed({
+            if (sseStopped) return@postDelayed
+            sseEventSource?.cancel()
+            val request = Request.Builder().url(apiV1("/events")).build()
+            sseEventSource = EventSources.createFactory(client).newEventSource(
+                request,
+                object : EventSourceListener() {
+                    override fun onOpen(eventSource: EventSource, response: Response) {
+                        Log.i("SSE", "已连接")
+                    }
+
+                    override fun onEvent(
+                        eventSource: EventSource,
+                        id: String?,
+                        type: String?,
+                        data: String
+                    ) {
+                        try {
+                            val msg = gson.fromJson(data, SseMessage::class.java)
+                            handleSseMessage(msg)
+                        } catch (e: Exception) {
+                            Log.e("SSE", "JSON 解析失败", e)
+                        }
+                    }
+
+                    override fun onFailure(
+                        eventSource: EventSource,
+                        t: Throwable?,
+                        response: Response?
+                    ) {
+                        Log.e("SSE", "SSE 连接断开，5s 后重连", t)
+                        if (!sseStopped) connectSSE(5000)
+                    }
+
+                    override fun onClosed(eventSource: EventSource) {
+                        if (!sseStopped) connectSSE(5000)
                     }
                 }
-
-                override fun onFailure(
-                    eventSource: EventSource,
-                    t: Throwable?,
-                    response: Response?
-                ) {
-                    Log.e("SSE", "SSE 连接断开", t)
-                }
-            }
-        )
+            )
+        }, retryDelayMs)
     }
 
     private fun handleSseMessage(msg: SseMessage) {
@@ -630,8 +734,18 @@ class MainActivity : AppCompatActivity() {
             }
             9 -> {
                 Thread {
-                    if (singsList.isNotEmpty() && singsList[0].id.toString() == msg.data) {
-                        prepareCurrentSong(autoPlay = pendingAutoPlay || videoPlayer.isPlaying)
+                    val readyId = msg.data.toIntOrNull() ?: return@Thread
+                    if (prepareWaitSongId == readyId) {
+                        prepareWaitSongId = -1
+                    }
+                    if (singsList.isEmpty()) {
+                        getSingListPure()
+                    }
+                    if (singsList.isNotEmpty() && singsList[0].id == readyId) {
+                        prepareCurrentSong(
+                            autoPlay = pendingAutoPlay || videoPlayer.isPlaying,
+                            forceReload = true
+                        )
                     }
                 }.start()
             }
@@ -660,6 +774,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        sseStopped = true
+        prepareWaitSongId = -1
         sseEventSource?.cancel()
         syncHandler.removeCallbacks(syncRunnable)
         videoPlayer.release()
@@ -680,6 +796,14 @@ data class Song(val id: Int, val name: String, val state: String) {
     fun isPending(): Boolean = state == "pending"
 }
 data class SseMessage(val code: Int, val data: String)
+data class PrepareResponse(val code: Int, val msg: String, val data: PrepareStatus?)
+data class PrepareStatus(
+    val ready: Boolean = false,
+    val status: String? = null,
+    val message: String? = null,
+    val progress: Double? = null,
+    val error: String? = null,
+)
 data class PlaybackResponse(val code: Int, val msg: String, val data: PlaybackData?)
 data class PlaybackData(
     val id: Int,
@@ -688,4 +812,5 @@ data class PlaybackData(
     val can_queue: Boolean,
     val ready_to_stream: Boolean = true,
     val playback_source: String? = null,
+    val prepare: PrepareStatus? = null,
 )

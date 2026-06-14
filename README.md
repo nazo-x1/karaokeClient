@@ -11,6 +11,7 @@ Android TV 播放端，适配新版 KTV 后端。
 - **plain**：单视频带原声播放
 - **enhanced**：静音视频 + 原唱/伴奏双音轨（覆写或内嵌 MKV 均由服务端解析）
 - 队列状态：`GET /api/v1/queue` 返回 `state` 字段（`pending` / `playing` / `sung`）
+- 未就绪歌曲：轮询 `prepare-status` + `ensure-ready`，SSE `PREPARE_READY`(9) 触发重载
 
 ## 使用
 
