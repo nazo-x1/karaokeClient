@@ -321,16 +321,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun firstPlayPure() {
         if (singsList.isNotEmpty()) {
-            val audioReady = if (playbackMode == MODE_PLAIN) {
-                true
-            } else {
-                isVocalsReady && isAccReady
-            }
-            if (!isVideoReady || !audioReady) {
-                loadSingPure(flag = true)
-            } else {
-                runOnUiThread { tryPlayPure() }
-            }
+            loadSingPure(flag = true)
         }
     }
 
@@ -348,7 +339,6 @@ class MainActivity : AppCompatActivity() {
             }
             return
         }
-        singsList.removeAt(0)
         loadSingPure(flag = true)
     }
 
@@ -479,7 +469,11 @@ class MainActivity : AppCompatActivity() {
                 if (msg.data == "1") {
                     runOnUiThread {
                         isPlayIntent = true
-                        tryPlayPure()
+                        if (!isVideoReady) {
+                            Thread { loadSingPure(flag = true) }.start()
+                        } else {
+                            tryPlayPure()
+                        }
                     }
                 }
                 if (msg.data == "5") {
@@ -528,7 +522,11 @@ class MainActivity : AppCompatActivity() {
                     videoPlayer.pause()
                 } else {
                     isPlayIntent = true
-                    tryPlayPure()
+                    if (!isVideoReady) {
+                        Thread { loadSingPure(flag = true) }.start()
+                    } else {
+                        tryPlayPure()
+                    }
                 }
                 return true
             }
