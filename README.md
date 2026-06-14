@@ -6,11 +6,11 @@ Android TV 播放端，适配新版 KTV 后端。
 
 ## 功能
 
-- 通过 `GET /song/{id}/playback` 获取 plain / enhanced 播放模式
-- 媒体流：`GET /song/stream/{id}/video|vocals|accompaniment`（不再使用 `/download/`）
+- 通过 `GET /api/v1/playback/songs/{id}` 获取 plain / enhanced 播放模式
+- 媒体流：`GET /api/v1/playback/stream/{id}/video|vocals|accompaniment`
 - **plain**：单视频带原声播放
 - **enhanced**：静音视频 + 原唱/伴奏双音轨（覆写或内嵌 MKV 均由服务端解析）
-- SSE 遥控与 Web 控制台同步（切歌、暂停、音量、原唱/伴奏切换）
+- 队列状态：`GET /api/v1/queue` 返回 `state` 字段（`pending` / `playing` / `sung`）
 
 ## 使用
 

@@ -26,6 +26,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.google.gson.Gson
 import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
@@ -119,12 +120,14 @@ class MainActivity : AppCompatActivity() {
         showIpConfigDialog()
     }
 
+    private fun apiV1(path: String): String = "$serverIp/api/v1$path"
+
     private fun streamUrl(songId: Int, kind: String): String {
-        return "$serverIp/song/stream/$songId/$kind"
+        return apiV1("/playback/stream/$songId/$kind")
     }
 
     private fun fetchPrepareStatus(songId: Int): PrepareStatus? {
-        val request = Request.Builder().url("$serverIp/song/$songId/prepare-status").build()
+        val request = Request.Builder().url(apiV1("/playback/songs/$songId/prepare-status")).build()
         return try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
@@ -140,7 +143,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun postEnsureReady(songId: Int): PrepareStatus? {
         val request = Request.Builder()
-            .url("$serverIp/song/$songId/ensure-ready")
+            .url(apiV1("/playback/songs/$songId/ensure-ready"))
             .post(byteArrayOf().toRequestBody(null))
             .build()
         return try {
@@ -178,7 +181,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fetchPlaybackProfile(songId: Int): PlaybackData? {
-        val request = Request.Builder().url("$serverIp/song/$songId/playback").build()
+        val request = Request.Builder().url(apiV1("/playback/songs/$songId")).build()
         return try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
@@ -244,7 +247,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun getSingListPure() {
-        val request = Request.Builder().url("$serverIp/song/singHistory/pendingAll").build()
+        val request = Request.Builder().url(apiV1("/queue")).build()
         try {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
@@ -267,7 +270,7 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             var playinText = "暂未开始播放"
             if (singsList.isNotEmpty()) {
-                if (singsList[0].is_sing == -1) {
+                if (singsList[0].isPlaying()) {
                     playinText = "当前播放：" + singsList[0].name
                     playinText += if (singsList.size > 1) {
                         "，下一首：" + singsList[1].name
@@ -286,7 +289,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun setSingedPure() {
         if (singsList.isEmpty()) return
-        val request = Request.Builder().url("$serverIp/song/setSinged/${singsList[0].id}").build()
+        val request = Request.Builder()
+            .url(apiV1("/playback/session/finished/${singsList[0].id}"))
+            .post(byteArrayOf().toRequestBody(null))
+            .build()
         try {
             client.newCall(request).execute().close()
         } catch (e: Exception) {
@@ -296,7 +302,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun setSingingPure() {
         if (singsList.isEmpty()) return
-        val request = Request.Builder().url("$serverIp/song/setSinging/${singsList[0].id}").build()
+        val request = Request.Builder()
+            .url(apiV1("/playback/session/singing/${singsList[0].id}"))
+            .post(byteArrayOf().toRequestBody(null))
+            .build()
         try {
             client.newCall(request).execute().close()
         } catch (e: Exception) {
@@ -305,7 +314,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun sendMessagePure(code: Int, data: String) {
-        val request = Request.Builder().url("$serverIp/song/send/event?code=$code&data=$data").build()
+        val payload = gson.toJson(mapOf("code" to code, "data" to data))
+        val request = Request.Builder()
+            .url(apiV1("/events/command"))
+            .post(payload.toRequestBody("application/json".toMediaType()))
+            .build()
         try {
             client.newCall(request).execute().close()
         } catch (e: Exception) {
@@ -570,7 +583,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startSSE() {
-        val request = Request.Builder().url("$serverIp/song/events").build()
+        val request = Request.Builder().url(apiV1("/events")).build()
         sseEventSource = EventSources.createFactory(client).newEventSource(
             request,
             object : EventSourceListener() {
@@ -692,7 +705,10 @@ class MainActivity : AppCompatActivity() {
 }
 
 data class ApiResponse(val code: Int, val msg: String, val data: List<Song>)
-data class Song(val id: Int, val name: String, val is_sing: Int)
+data class Song(val id: Int, val name: String, val state: String) {
+    fun isPlaying(): Boolean = state == "playing"
+    fun isPending(): Boolean = state == "pending"
+}
 data class SseMessage(val code: Int, val data: String)
 data class PlaybackResponse(val code: Int, val msg: String, val data: PlaybackData?)
 data class PlaybackData(
