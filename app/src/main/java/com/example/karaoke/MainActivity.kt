@@ -126,60 +126,6 @@ class MainActivity : AppCompatActivity() {
         return apiV1("/playback/stream/$songId/$kind")
     }
 
-    private fun fetchPrepareStatus(songId: Int): PrepareStatus? {
-        val request = Request.Builder().url(apiV1("/playback/songs/$songId/prepare-status")).build()
-        return try {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val bodyStr = response.body?.string() ?: return null
-                val res = gson.fromJson(bodyStr, PrepareStatusResponse::class.java)
-                if (res.code == 0) res.data else null
-            }
-        } catch (e: Exception) {
-            Log.e("KTV_DEBUG", "fetchPrepareStatus 出错", e)
-            null
-        }
-    }
-
-    private fun postEnsureReady(songId: Int): PrepareStatus? {
-        val request = Request.Builder()
-            .url(apiV1("/playback/songs/$songId/ensure-ready"))
-            .post(byteArrayOf().toRequestBody(null))
-            .build()
-        return try {
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return null
-                val bodyStr = response.body?.string() ?: return null
-                val res = gson.fromJson(bodyStr, PrepareStatusResponse::class.java)
-                if (res.code == 0) res.data else res.data
-            }
-        } catch (e: Exception) {
-            Log.e("KTV_DEBUG", "postEnsureReady 出错", e)
-            null
-        }
-    }
-
-    private fun waitUntilPlaybackReady(songId: Int, timeoutMs: Long = 3_600_000L): Boolean {
-        var prep = postEnsureReady(songId) ?: return false
-        if (prep.ready) return true
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            if (prep.ready) return true
-            if (prep.status == "failed") {
-                showToast(prep.error ?: "播放资源准备失败")
-                return false
-            }
-            try {
-                Thread.sleep(1500)
-            } catch (_: InterruptedException) {
-                return false
-            }
-            prep = fetchPrepareStatus(songId) ?: prep
-        }
-        showToast("等待播放资源超时")
-        return false
-    }
-
     private fun fetchPlaybackProfile(songId: Int): PlaybackData? {
         val request = Request.Builder().url(apiV1("/playback/songs/$songId")).build()
         return try {
@@ -339,6 +285,34 @@ class MainActivity : AppCompatActivity() {
         return isVocalsReady && isAccReady
     }
 
+    private fun postSkipUnready(songId: Int) {
+        val request = Request.Builder()
+            .url(apiV1("/playback/session/skip-unready/$songId"))
+            .post(byteArrayOf().toRequestBody(null))
+            .build()
+        try {
+            client.newCall(request).execute().close()
+        } catch (e: Exception) {
+            Log.e("KTV_DEBUG", "postSkipUnready 出错", e)
+        }
+    }
+
+    private fun skipUnreadyAndContinue(autoPlay: Boolean) {
+        getSingListPure()
+        if (singsList.isEmpty()) {
+            runOnUiThread {
+                currentSongId = -1
+                tvPlayingText.text = "当前没有待播放的歌曲，快去点歌吧 ~"
+                videoPlayer.stop()
+                vocalsPlayer.stop()
+                accPlayer.stop()
+                resetReadyFlags()
+            }
+            return
+        }
+        prepareCurrentSong(autoPlay = autoPlay, forceReload = true)
+    }
+
     /** 加载队首歌曲；同一首歌已缓冲时仅恢复播放，不重新拉流。 */
     private fun prepareCurrentSong(autoPlay: Boolean, forceReload: Boolean = false) {
         getSingListPure()
@@ -359,15 +333,11 @@ class MainActivity : AppCompatActivity() {
             showToast("无法获取播放配置")
             return
         }
-        if (!profile.can_queue) {
-            showToast("当前歌曲不可播放")
+        if (!profile.can_queue || !profile.ready_to_stream) {
+            showToast("播放资源未就绪，已跳过")
+            postSkipUnready(song.id)
+            skipUnreadyAndContinue(autoPlay)
             return
-        }
-        if (!profile.ready_to_stream) {
-            showToast("正在准备播放资源…")
-            if (!waitUntilPlaybackReady(song.id)) {
-                return
-            }
         }
 
         playbackMode = if (profile.mode == MODE_ENHANCED) MODE_ENHANCED else MODE_PLAIN
@@ -718,11 +688,4 @@ data class PlaybackData(
     val can_queue: Boolean,
     val ready_to_stream: Boolean = true,
     val playback_source: String? = null,
-)
-data class PrepareStatusResponse(val code: Int, val msg: String, val data: PrepareStatus?)
-data class PrepareStatus(
-    val song_id: Int,
-    val status: String,
-    val ready: Boolean,
-    val error: String? = null,
 )
