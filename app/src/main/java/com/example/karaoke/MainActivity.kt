@@ -26,6 +26,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.google.gson.Gson
 import okhttp3.*
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.sse.EventSource
 import okhttp3.sse.EventSourceListener
 import okhttp3.sse.EventSources
@@ -138,7 +139,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun postEnsureReady(songId: Int): PrepareStatus? {
-        val request = Request.Builder().url("$serverIp/song/$songId/ensure-ready").post(RequestBody.EMPTY).build()
+        val request = Request.Builder()
+            .url("$serverIp/song/$songId/ensure-ready")
+            .post(byteArrayOf().toRequestBody(null))
+            .build()
         return try {
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return null
