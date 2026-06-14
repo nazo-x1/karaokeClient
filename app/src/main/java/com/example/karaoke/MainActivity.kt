@@ -1,7 +1,7 @@
 package com.example.karaoke
 
 import android.content.Context
-import android.media.AudioAttributes
+import android.media.AudioAttributes as PlatformAudioAttributes
 import android.media.SoundPool
 import android.os.Bundle
 import android.os.Handler
@@ -15,7 +15,10 @@ import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -42,6 +45,7 @@ class MainActivity : AppCompatActivity() {
 
     private val client = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
+        .connectTimeout(30, TimeUnit.SECONDS)
         .build()
     private val gson = Gson()
     private var sseEventSource: EventSource? = null
@@ -52,11 +56,12 @@ class MainActivity : AppCompatActivity() {
 
     private var singsList = mutableListOf<Song>()
     private var playbackMode = MODE_ENHANCED
+    private var currentSongId = -1
 
     private var isVideoReady = false
     private var isVocalsReady = false
     private var isAccReady = false
-    private var isPlayIntent = false
+    private var pendingAutoPlay = false
 
     private val syncHandler = Handler(Looper.getMainLooper())
     private val syncRunnable = object : Runnable {
@@ -133,9 +138,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initSoundEffects() {
-        val audioAttributes = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_MEDIA)
-            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+        val audioAttributes = PlatformAudioAttributes.Builder()
+            .setUsage(PlatformAudioAttributes.USAGE_MEDIA)
+            .setContentType(PlatformAudioAttributes.CONTENT_TYPE_MUSIC)
             .build()
         soundPool = SoundPool.Builder()
             .setMaxStreams(4)
@@ -179,7 +184,7 @@ class MainActivity : AppCompatActivity() {
 
                 initPlayers()
                 startSSE()
-                Thread { loadSingPure(flag = false) }.start()
+                Thread { prepareCurrentSong(autoPlay = false) }.start()
             }.show()
     }
 
@@ -253,11 +258,34 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadSingPure(flag: Boolean) {
+    private fun resetReadyFlags() {
+        isVideoReady = false
+        isVocalsReady = false
+        isAccReady = false
+    }
+
+    private fun isPreparedForSong(songId: Int): Boolean {
+        if (songId != currentSongId) return false
+        if (!isVideoReady) return false
+        if (playbackMode == MODE_PLAIN) return true
+        return isVocalsReady && isAccReady
+    }
+
+    /** 加载队首歌曲；同一首歌已缓冲时仅恢复播放，不重新拉流。 */
+    private fun prepareCurrentSong(autoPlay: Boolean, forceReload: Boolean = false) {
         getSingListPure()
         if (singsList.isEmpty()) return
 
         val song = singsList[0]
+        if (!forceReload && isPreparedForSong(song.id)) {
+            runOnUiThread {
+                pendingAutoPlay = autoPlay
+                if (autoPlay) startPlayback()
+            }
+            showTipsPure()
+            return
+        }
+
         val profile = fetchPlaybackProfile(song.id)
         if (profile == null) {
             showToast("无法获取播放配置")
@@ -268,18 +296,17 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        playbackMode = if (profile.mode == MODE_PLAIN) MODE_PLAIN else MODE_ENHANCED
+        playbackMode = if (profile.mode == MODE_ENHANCED) MODE_ENHANCED else MODE_PLAIN
+        currentSongId = song.id
         val videoUrl = streamUrl(song.id, "video")
 
         runOnUiThread {
-            isVideoReady = false
-            isVocalsReady = false
-            isAccReady = false
-            isPlayIntent = flag
+            pendingAutoPlay = autoPlay
+            resetReadyFlags()
 
-            videoPlayer.stop()
-            vocalsPlayer.stop()
-            accPlayer.stop()
+            videoPlayer.pause()
+            vocalsPlayer.pause()
+            accPlayer.pause()
 
             if (playbackMode == MODE_PLAIN) {
                 videoPlayer.volume = 1.0f
@@ -300,29 +327,54 @@ class MainActivity : AppCompatActivity() {
         showTipsPure()
     }
 
-    private fun tryPlayPure() {
+    private fun startPlayback() {
         val audioReady = if (playbackMode == MODE_PLAIN) {
             true
         } else {
             isVocalsReady && isAccReady
         }
-        if (isVideoReady && audioReady) {
-            isPlayIntent = false
-            if (playbackMode == MODE_ENHANCED) {
-                val pos = videoPlayer.currentPosition
-                vocalsPlayer.seekTo(pos)
-                accPlayer.seekTo(pos)
-                vocalsPlayer.play()
-                accPlayer.play()
-            }
-            videoPlayer.play()
+        if (!isVideoReady || !audioReady) {
+            pendingAutoPlay = true
+            return
+        }
+
+        pendingAutoPlay = false
+        val pos = videoPlayer.currentPosition
+        if (playbackMode == MODE_ENHANCED) {
+            vocalsPlayer.seekTo(pos)
+            accPlayer.seekTo(pos)
+            vocalsPlayer.playWhenReady = true
+            accPlayer.playWhenReady = true
+        }
+        videoPlayer.playWhenReady = true
+    }
+
+    private fun pausePlayback() {
+        pendingAutoPlay = false
+        videoPlayer.playWhenReady = false
+        if (playbackMode == MODE_ENHANCED) {
+            vocalsPlayer.playWhenReady = false
+            accPlayer.playWhenReady = false
+        }
+    }
+
+    private fun togglePlayPause() {
+        if (videoPlayer.isPlaying) {
+            pausePlayback()
+            Thread { sendMessagePure(1, "4") }.start()
+        } else if (isPreparedForSong(currentSongId)) {
+            startPlayback()
+        } else if (singsList.isNotEmpty()) {
+            prepareCurrentSong(autoPlay = true, forceReload = false)
         }
     }
 
     private fun firstPlayPure() {
-        if (singsList.isNotEmpty()) {
-            loadSingPure(flag = true)
+        if (singsList.isEmpty()) {
+            getSingListPure()
         }
+        if (singsList.isEmpty()) return
+        prepareCurrentSong(autoPlay = true, forceReload = false)
     }
 
     private fun nextSongPure() {
@@ -332,60 +384,90 @@ class MainActivity : AppCompatActivity() {
         getSingListPure()
         if (singsList.isEmpty()) {
             runOnUiThread {
+                currentSongId = -1
                 tvPlayingText.text = "当前没有待播放的歌曲，快去点歌吧 ~"
                 videoPlayer.stop()
                 vocalsPlayer.stop()
                 accPlayer.stop()
+                resetReadyFlags()
             }
             return
         }
-        loadSingPure(flag = true)
+        prepareCurrentSong(autoPlay = true, forceReload = true)
     }
 
     private fun reSingPure() {
         runOnUiThread {
             videoPlayer.seekTo(0)
-            videoPlayer.play()
             if (playbackMode == MODE_ENHANCED) {
                 vocalsPlayer.seekTo(0)
                 accPlayer.seekTo(0)
-                vocalsPlayer.play()
-                accPlayer.play()
             }
+            startPlayback()
         }
     }
 
     @OptIn(UnstableApi::class)
     private fun initPlayers() {
-        val tvLoadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(10000, 30000, 1500, 2000)
+        val mediaAudio = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
             .build()
-        videoPlayer = ExoPlayer.Builder(this).setLoadControl(tvLoadControl).build().apply { volume = 0f }
-        vocalsPlayer = ExoPlayer.Builder(this).build().apply { volume = vocalsVolume }
-        accPlayer = ExoPlayer.Builder(this).build().apply { volume = accVolume }
+
+        val tvLoadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(15000, 50000, 2500, 5000)
+            .build()
+
+        videoPlayer = ExoPlayer.Builder(this)
+            .setLoadControl(tvLoadControl)
+            .build()
+            .apply {
+                volume = 0f
+                setAudioAttributes(mediaAudio, true)
+                setWakeMode(C.WAKE_MODE_NETWORK)
+            }
+        vocalsPlayer = ExoPlayer.Builder(this).build().apply {
+            volume = vocalsVolume
+            setAudioAttributes(mediaAudio, true)
+        }
+        accPlayer = ExoPlayer.Builder(this).build().apply {
+            volume = accVolume
+            setAudioAttributes(mediaAudio, true)
+        }
 
         playerView.player = videoPlayer
+        playerView.setKeepContentOnPlayerReset(true)
+
+        val errorListener = object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                Log.e("KTV_DEBUG", "播放错误: ${error.errorCodeName}", error)
+                showToast("播放失败: ${error.errorCodeName}")
+            }
+        }
 
         videoPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_READY) {
-                    isVideoReady = true
-                    if (isPlayIntent) tryPlayPure()
-                } else if (state == Player.STATE_ENDED) {
-                    isVideoReady = false
-                    if (playbackMode == MODE_ENHANCED) {
-                        isVocalsReady = false
-                        isAccReady = false
+                when (state) {
+                    Player.STATE_READY -> {
+                        isVideoReady = true
+                        if (pendingAutoPlay) startPlayback()
                     }
-                    Thread { nextSongPure() }.start()
+                    Player.STATE_ENDED -> {
+                        isVideoReady = false
+                        if (playbackMode == MODE_ENHANCED) {
+                            isVocalsReady = false
+                            isAccReady = false
+                        }
+                        Thread { nextSongPure() }.start()
+                    }
                 }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 if (isPlaying) {
                     if (playbackMode == MODE_ENHANCED) {
-                        if (!vocalsPlayer.isPlaying) vocalsPlayer.play()
-                        if (!accPlayer.isPlaying) accPlayer.play()
+                        if (!vocalsPlayer.isPlaying) vocalsPlayer.playWhenReady = true
+                        if (!accPlayer.isPlaying) accPlayer.playWhenReady = true
                     }
                     Thread {
                         setSingingPure()
@@ -393,35 +475,35 @@ class MainActivity : AppCompatActivity() {
                         getSingListPure()
                         showTipsPure()
                     }.start()
-                } else {
-                    if (videoPlayer.playbackState != Player.STATE_ENDED) {
-                        if (playbackMode == MODE_ENHANCED) {
-                            if (vocalsPlayer.isPlaying) vocalsPlayer.pause()
-                            if (accPlayer.isPlaying) accPlayer.pause()
-                        }
-                        Thread { sendMessagePure(1, "4") }.start()
+                } else if (videoPlayer.playbackState != Player.STATE_ENDED) {
+                    if (playbackMode == MODE_ENHANCED) {
+                        vocalsPlayer.playWhenReady = false
+                        accPlayer.playWhenReady = false
                     }
                 }
             }
         })
+        videoPlayer.addListener(errorListener)
 
         vocalsPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY) {
                     isVocalsReady = true
-                    if (isPlayIntent) tryPlayPure()
+                    if (pendingAutoPlay) startPlayback()
                 }
             }
         })
+        vocalsPlayer.addListener(errorListener)
 
         accPlayer.addListener(object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY) {
                     isAccReady = true
-                    if (isPlayIntent) tryPlayPure()
+                    if (pendingAutoPlay) startPlayback()
                 }
             }
         })
+        accPlayer.addListener(errorListener)
 
         syncHandler.post(syncRunnable)
     }
@@ -459,25 +541,17 @@ class MainActivity : AppCompatActivity() {
     private fun handleSseMessage(msg: SseMessage) {
         when (msg.code) {
             1 -> {
-                if (msg.data == "0") runOnUiThread {
-                    if (videoPlayer.isPlaying) {
-                        videoPlayer.pause()
-                    } else {
-                        Thread { sendMessagePure(1, "4") }.start()
-                    }
-                }
-                if (msg.data == "1") {
-                    runOnUiThread {
-                        isPlayIntent = true
-                        if (!isVideoReady) {
-                            Thread { loadSingPure(flag = true) }.start()
+                when (msg.data) {
+                    "0" -> runOnUiThread { pausePlayback() }
+                    "1" -> runOnUiThread {
+                        if (videoPlayer.isPlaying) return@runOnUiThread
+                        if (isPreparedForSong(currentSongId)) {
+                            startPlayback()
                         } else {
-                            tryPlayPure()
+                            Thread { prepareCurrentSong(autoPlay = true) }.start()
                         }
                     }
-                }
-                if (msg.data == "5") {
-                    Thread { firstPlayPure() }.start()
+                    "5" -> Thread { firstPlayPure() }.start()
                 }
             }
             2 -> reSingPure()
@@ -518,16 +592,7 @@ class MainActivity : AppCompatActivity() {
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
             KeyEvent.KEYCODE_DPAD_CENTER,
             KeyEvent.KEYCODE_ENTER -> {
-                if (videoPlayer.isPlaying) {
-                    videoPlayer.pause()
-                } else {
-                    isPlayIntent = true
-                    if (!isVideoReady) {
-                        Thread { loadSingPure(flag = true) }.start()
-                    } else {
-                        tryPlayPure()
-                    }
-                }
+                runOnUiThread { togglePlayPause() }
                 return true
             }
             KeyEvent.KEYCODE_MEDIA_NEXT -> {
