@@ -2,6 +2,8 @@
 
 Android TV 播放端，适配新版 KTV 后端。
 
+[![Build APK](https://github.com/nazo-x1/karaokeClient/actions/workflows/build-apk.yml/badge.svg)](https://github.com/nazo-x1/karaokeClient/actions/workflows/build-apk.yml)
+
 ## 功能
 
 - 通过 `GET /song/{id}/playback` 获取 plain / enhanced 播放模式
@@ -17,3 +19,18 @@ Android TV 播放端，适配新版 KTV 后端。
 3. 在手机/Web 控制台点歌，TV 端自动播放
 
 仅支持 Android TV。
+
+## CI/CD
+
+推送 `main` 或发起 PR 时，GitHub Actions 自动执行 `./gradlew assembleDebug` 并上传 APK 产物（保留 90 天）。
+
+- 在 [Actions](https://github.com/nazo-x1/karaokeClient/actions/workflows/build-apk.yml) 页面下载 `karaoke-apk-*` artifact
+- 也可在 Actions 页手动触发 **Run workflow**
+- 推送 `v*` 标签（如 `v1.0.1`）时，自动创建 GitHub Release 并附带 APK 与 sha256 校验文件
+
+本地构建：
+
+```bash
+./gradlew assembleDebug
+# 输出：app/build/outputs/apk/debug/app-debug.apk
+```
