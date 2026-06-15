@@ -686,6 +686,33 @@ class MainActivity : AppCompatActivity() {
         }, retryDelayMs)
     }
 
+    private fun onQueueChanged() {
+        val prevHeadId = singsList.firstOrNull()?.id
+        val wasPlaying = videoPlayer.isPlaying
+        getSingListPure()
+        showTipsPure()
+
+        if (singsList.isEmpty()) {
+            if (!wasPlaying) {
+                runOnUiThread {
+                    currentSongId = -1
+                    tvPlayingText.text = "当前没有待播放的歌曲，快去点歌吧 ~"
+                    videoPlayer.stop()
+                    vocalsPlayer.stop()
+                    accPlayer.stop()
+                    resetReadyFlags()
+                }
+            }
+            return
+        }
+
+        val newHead = singsList[0]
+        val headChanged = prevHeadId != newHead.id
+        if (!wasPlaying && (headChanged || !isPreparedForSong(newHead.id))) {
+            prepareCurrentSong(autoPlay = false, forceReload = headChanged)
+        }
+    }
+
     private fun handleSseMessage(msg: SseMessage) {
         when (msg.code) {
             1 -> {
@@ -726,12 +753,7 @@ class MainActivity : AppCompatActivity() {
                     .edit().putFloat("accompanimentVolume", accVolume).apply()
             }
             7 -> runOnUiThread { playUserInterruption(msg.data) }
-            8 -> {
-                Thread {
-                    getSingListPure()
-                    showTipsPure()
-                }.start()
-            }
+            8 -> Thread { onQueueChanged() }.start()
             9 -> {
                 Thread {
                     val readyId = msg.data.toIntOrNull() ?: return@Thread
