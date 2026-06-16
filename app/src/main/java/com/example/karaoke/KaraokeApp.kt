@@ -118,4 +118,6 @@ private fun createPlayerView(context: android.content.Context, container: AppCon
         player = container.playbackEngine.videoPlayer
         useController = false
         setKeepContentOnPlayerReset(true)
+        resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+        setShutterBackgroundColor(android.graphics.Color.BLACK)
     }

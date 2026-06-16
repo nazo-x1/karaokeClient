@@ -3,6 +3,7 @@ package com.example.karaoke.ui.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.karaoke.data.KaraokeRepository
+import com.example.karaoke.data.ServerUrlNormalizer
 import com.example.karaoke.data.prefs.SettingsStore
 import com.example.karaoke.data.remote.dto.QueueItem
 import com.example.karaoke.data.remote.dto.SongItem
@@ -424,10 +425,14 @@ class PlayerViewModel(
     }
 
     fun testConnection() {
-        val url = _uiState.value.settingsUrl.trim().trimEnd('/')
+        val normalized = ServerUrlNormalizer.normalize(_uiState.value.settingsUrl)
+        if (normalized.isNullOrBlank()) {
+            _uiState.update { it.copy(settingsError = "地址格式无效") }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(settingsTesting = true, settingsError = null) }
-            val result = repository.probe(url)
+            val result = repository.probe(normalized)
             _uiState.update {
                 it.copy(
                     settingsTesting = false,
@@ -440,10 +445,14 @@ class PlayerViewModel(
     }
 
     fun saveAndReconnect() {
-        val url = _uiState.value.settingsUrl.trim().trimEnd('/')
+        val normalized = ServerUrlNormalizer.normalize(_uiState.value.settingsUrl)
+        if (normalized.isNullOrBlank()) {
+            _uiState.update { it.copy(settingsError = "地址格式无效") }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(settingsTesting = true) }
-            val result = repository.probe(url)
+            val result = repository.probe(normalized)
             if (result.isFailure) {
                 _uiState.update {
                     it.copy(
@@ -453,7 +462,7 @@ class PlayerViewModel(
                 }
                 return@launch
             }
-            repository.reconnect(url)
+            repository.reconnect(normalized)
             playbackEngine.cancelPrepareWait()
             refreshQueue()
             val queue = repository.queue.value

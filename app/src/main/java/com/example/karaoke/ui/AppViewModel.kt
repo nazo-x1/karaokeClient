@@ -3,6 +3,7 @@ package com.example.karaoke.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.karaoke.data.KaraokeRepository
+import com.example.karaoke.data.ServerUrlNormalizer
 import com.example.karaoke.ui.navigation.AppPhase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,19 +26,19 @@ class AppViewModel(
     val connecting: StateFlow<Boolean> = _connecting.asStateFlow()
 
     fun connect(serverUrl: String) {
-        val url = serverUrl.trim().trimEnd('/')
-        if (url.isBlank()) {
-            _setupError.value = "请输入服务器地址"
+        val normalized = ServerUrlNormalizer.normalize(serverUrl)
+        if (normalized.isNullOrBlank()) {
+            _setupError.value = "请输入服务器地址，示例：http://192.168.1.20:15233"
             return
         }
         viewModelScope.launch {
             _connecting.value = true
             _setupError.value = null
-            val result = repository.probe(url)
+            val result = repository.probe(normalized)
             _connecting.value = false
             result.fold(
                 onSuccess = {
-                    repository.saveServer(url)
+                    repository.saveServer(normalized)
                     _phase.value = AppPhase.Player
                 },
                 onFailure = { _setupError.value = it.message ?: "连接失败" },

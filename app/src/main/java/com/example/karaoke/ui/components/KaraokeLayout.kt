@@ -14,11 +14,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.example.karaoke.ui.theme.DesignTokens
 import com.example.karaoke.ui.theme.KaraokeColors
 import com.example.karaoke.ui.theme.KaraokeDimens
 import com.example.karaoke.ui.theme.wdp
 
+/** 配置/表单类全屏容器（有应用背景色）。 */
 @Composable
 fun KaraokeScreen(
     modifier: Modifier = Modifier,
@@ -34,8 +36,25 @@ fun KaraokeScreen(
     )
 }
 
+/**
+ * 播放画布：全屏留给 [PlayerView]，不设应用背景色，避免遮挡视频画面。
+ */
 @Composable
-fun KaraokeOverlay(
+fun KaraokePlayerCanvas(
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        content = content,
+    )
+}
+
+/** 叠在播放画面上的半透明遮罩（空闲 / 准备 / 错误等中间态）。 */
+@Composable
+fun KaraokePlayerOverlay(
     modifier: Modifier = Modifier,
     contentAlignment: Alignment = Alignment.Center,
     content: @Composable () -> Unit,
@@ -47,6 +66,15 @@ fun KaraokeOverlay(
         contentAlignment = contentAlignment,
         content = { content() },
     )
+}
+
+@Composable
+fun KaraokeOverlay(
+    modifier: Modifier = Modifier,
+    contentAlignment: Alignment = Alignment.Center,
+    content: @Composable () -> Unit,
+) {
+    KaraokePlayerOverlay(modifier, contentAlignment, content)
 }
 
 @Composable

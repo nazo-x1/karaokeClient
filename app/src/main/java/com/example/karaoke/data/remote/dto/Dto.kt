@@ -1,5 +1,10 @@
 package com.example.karaoke.data.remote.dto
 
+data class ApiEnvelope(
+    val code: Int,
+    val msg: String? = null,
+)
+
 data class ApiResult<T>(
     val code: Int,
     val msg: String? = null,

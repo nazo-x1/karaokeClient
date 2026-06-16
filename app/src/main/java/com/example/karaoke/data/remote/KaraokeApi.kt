@@ -1,5 +1,6 @@
 package com.example.karaoke.data.remote
 
+import com.example.karaoke.data.remote.dto.ApiEnvelope
 import com.example.karaoke.data.remote.dto.ApiResult
 import com.example.karaoke.data.remote.dto.PlaybackData
 import com.example.karaoke.data.remote.dto.PrepareStatus
@@ -11,6 +12,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.util.concurrent.TimeUnit
 
 class KaraokeApi(
@@ -29,35 +33,36 @@ class KaraokeApi(
     private inline fun <reified T> parse(body: String): ApiResult<T>? =
         gson.fromJson(body, object : TypeToken<ApiResult<T>>() {}.type)
 
+    private fun parseEnvelope(body: String): ApiEnvelope? =
+        gson.fromJson(body, ApiEnvelope::class.java)
+
     private fun <T> execute(request: Request, parser: (String) -> T?): Result<T> = try {
         client.newCall(request).execute().use { response ->
-            val bodyStr = response.body?.string() ?: return Result.failure(Exception("空响应"))
+            val bodyStr = response.body?.string() ?: return Result.failure(Exception("服务器无响应"))
             if (!response.isSuccessful) {
-                return Result.failure(Exception("HTTP ${response.code}"))
+                return Result.failure(
+                    Exception(mapHttpError(response.code, bodyStr)),
+                )
             }
-            val parsed = parser(bodyStr) ?: return Result.failure(Exception("解析失败"))
+            val parsed = parser(bodyStr) ?: return Result.failure(Exception("无法解析服务器响应"))
             Result.success(parsed)
         }
     } catch (e: Exception) {
-        Result.failure(e)
-    }
-
-    private inline fun <reified T> apiGet(path: String): Result<T> {
-        val request = Request.Builder().url(apiV1(path)).build()
-        return execute(request) { body ->
-            val res = parse<T>(body) ?: return@execute null
-            if (res.code != 0) throw Exception(res.msg ?: "请求失败")
-            res.data
-        }
+        Result.failure(Exception(mapNetworkError(e)))
     }
 
     fun probeConnection(): Result<Unit> {
         val request = Request.Builder()
             .url(apiV1("/library/songs?page=1&q="))
+            .get()
             .build()
         return execute(request) { body ->
-            val res = parse<List<SongItem>>(body) ?: return@execute null
-            if (res.code != 0) throw Exception(res.msg ?: "连接失败")
+            val trimmed = body.trimStart()
+            if (trimmed.startsWith("<")) {
+                throw Exception("返回的是网页而非 API，请只填服务器根地址（如 http://IP:端口）")
+            }
+            val res = parseEnvelope(body) ?: return@execute null
+            if (res.code != 0) throw Exception(res.msg?.ifBlank { null } ?: "连接失败")
             Unit
         }
     }
@@ -85,7 +90,7 @@ class KaraokeApi(
             .delete()
             .build()
         return execute(request) { body ->
-            val res = gson.fromJson(body, ApiResult::class.java)
+            val res = gson.fromJson(body, ApiEnvelope::class.java)
             if (res.code != 0) throw Exception(res.msg ?: "移除失败")
             Unit
         }
@@ -136,13 +141,22 @@ class KaraokeApi(
 
     fun eventsUrl(): String = apiV1("/events")
 
+    private inline fun <reified T> apiGet(path: String): Result<T> {
+        val request = Request.Builder().url(apiV1(path)).build()
+        return execute(request) { body ->
+            val res = parse<T>(body) ?: return@execute null
+            if (res.code != 0) throw Exception(res.msg ?: "请求失败")
+            res.data ?: throw Exception("服务器未返回数据")
+        }
+    }
+
     private fun postEmpty(path: String): Result<Unit> {
         val request = Request.Builder()
             .url(apiV1(path))
             .post(byteArrayOf().toRequestBody(null))
             .build()
         return execute(request) { body ->
-            val res = gson.fromJson(body, ApiResult::class.java)
+            val res = gson.fromJson(body, ApiEnvelope::class.java)
             if (res.code != 0) throw Exception(res.msg ?: "请求失败")
             Unit
         }
@@ -150,6 +164,31 @@ class KaraokeApi(
 
     private fun String.encode(): String =
         java.net.URLEncoder.encode(this, Charsets.UTF_8.name())
+
+    private fun mapHttpError(code: Int, body: String): String = when (code) {
+        404 -> "未找到 API（/api/v1），请确认后端版本与地址是否正确"
+        401, 403 -> "服务器拒绝访问（HTTP $code）"
+        else -> {
+            val envelope = runCatching { parseEnvelope(body) }.getOrNull()
+            envelope?.msg?.takeIf { it.isNotBlank() }
+                ?: "HTTP $code"
+        }
+    }
+
+    private fun mapNetworkError(e: Exception): String {
+        val msg = e.message.orEmpty()
+        return when {
+            e is UnknownHostException -> "无法解析主机，请检查地址是否正确"
+            e is ConnectException -> "无法连接服务器，请确认 IP、端口与网络"
+            e is SocketTimeoutException -> "连接超时，请确认服务器可达"
+            msg.contains("NetworkOnMainThread", ignoreCase = true) ->
+                "网络请求异常，请更新客户端版本"
+            msg.contains("Cleartext", ignoreCase = true) ->
+                "明文 HTTP 被系统拦截，请使用 http:// 开头地址"
+            msg.isNotBlank() -> msg
+            else -> "连接失败"
+        }
+    }
 
     companion object {
         fun createDefaultClient(): OkHttpClient = OkHttpClient.Builder()

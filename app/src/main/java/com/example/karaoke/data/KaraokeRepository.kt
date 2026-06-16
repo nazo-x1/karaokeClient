@@ -7,9 +7,11 @@ import com.example.karaoke.data.remote.dto.PlaybackData
 import com.example.karaoke.data.remote.dto.PrepareStatus
 import com.example.karaoke.data.remote.dto.QueueItem
 import com.example.karaoke.data.remote.dto.SongItem
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 
 class KaraokeRepository(
     private val api: KaraokeApi,
@@ -28,13 +30,16 @@ class KaraokeRepository(
     }
 
     fun saveServer(url: String) {
-        settings.server = url
-        api.setBaseUrl(url)
+        val normalized = ServerUrlNormalizer.normalize(url) ?: url.trim().trimEnd('/')
+        settings.server = normalized
+        api.setBaseUrl(normalized)
     }
 
-    suspend fun probe(url: String): Result<Unit> {
-        api.setBaseUrl(url)
-        return api.probeConnection()
+    suspend fun probe(url: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val normalized = ServerUrlNormalizer.normalize(url)
+            ?: return@withContext Result.failure(Exception("地址格式无效，示例：http://192.168.1.20:15233"))
+        api.setBaseUrl(normalized)
+        api.probeConnection()
     }
 
     fun reconnect(url: String) {
@@ -42,38 +47,44 @@ class KaraokeRepository(
         saveServer(url)
     }
 
-    suspend fun refreshQueue(): Result<List<QueueItem>> {
+    suspend fun refreshQueue(): Result<List<QueueItem>> = withContext(Dispatchers.IO) {
         val result = api.fetchQueue()
         result.onSuccess { _queue.value = it }
-        return result
+        result
     }
 
     suspend fun loadLibrary(page: Int, q: String): Result<List<SongItem>> =
-        api.fetchLibrary(page, q)
+        withContext(Dispatchers.IO) { api.fetchLibrary(page, q) }
 
-    suspend fun enqueue(songId: Int): Result<Unit> = api.enqueue(songId)
+    suspend fun enqueue(songId: Int): Result<Unit> =
+        withContext(Dispatchers.IO) { api.enqueue(songId) }
 
-    suspend fun setTop(songId: Int): Result<Unit> = api.setTop(songId)
+    suspend fun setTop(songId: Int): Result<Unit> =
+        withContext(Dispatchers.IO) { api.setTop(songId) }
 
-    suspend fun remove(songId: Int): Result<Unit> = api.removeFromQueue(songId)
+    suspend fun remove(songId: Int): Result<Unit> =
+        withContext(Dispatchers.IO) { api.removeFromQueue(songId) }
 
     suspend fun fetchPlaybackProfile(songId: Int): Result<PlaybackData> =
-        api.fetchPlaybackProfile(songId)
+        withContext(Dispatchers.IO) { api.fetchPlaybackProfile(songId) }
 
     suspend fun fetchPrepareStatus(songId: Int): Result<PrepareStatus?> =
-        api.fetchPrepareStatus(songId)
+        withContext(Dispatchers.IO) { api.fetchPrepareStatus(songId) }
 
     suspend fun ensureReady(songId: Int): Result<PrepareStatus?> =
-        api.postEnsureReady(songId)
+        withContext(Dispatchers.IO) { api.postEnsureReady(songId) }
 
-    suspend fun markSinging(songId: Int): Result<Unit> = api.markSinging(songId)
+    suspend fun markSinging(songId: Int): Result<Unit> =
+        withContext(Dispatchers.IO) { api.markSinging(songId) }
 
-    suspend fun markFinished(songId: Int): Result<Unit> = api.markFinished(songId)
+    suspend fun markFinished(songId: Int): Result<Unit> =
+        withContext(Dispatchers.IO) { api.markFinished(songId) }
 
-    suspend fun skipUnready(songId: Int): Result<Unit> = api.skipUnready(songId)
+    suspend fun skipUnready(songId: Int): Result<Unit> =
+        withContext(Dispatchers.IO) { api.skipUnready(songId) }
 
     suspend fun sendCommand(code: Int, data: String): Result<Unit> =
-        api.sendCommand(code, data)
+        withContext(Dispatchers.IO) { api.sendCommand(code, data) }
 
     fun streamUrl(songId: Int, kind: String): String = api.streamUrl(songId, kind)
 
