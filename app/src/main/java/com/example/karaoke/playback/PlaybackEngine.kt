@@ -14,6 +14,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.karaoke.R
 import com.example.karaoke.data.KaraokeRepository
@@ -376,7 +377,11 @@ class PlaybackEngine(
             .setBufferDurationsMs(15000, 50000, 2500, 5000)
             .build()
 
-        videoPlayer = ExoPlayer.Builder(context)
+        val renderersFactory = DefaultRenderersFactory(context)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            .setEnableDecoderFallback(true)
+
+        videoPlayer = ExoPlayer.Builder(context, renderersFactory)
             .setLoadControl(tvLoadControl)
             .build()
             .apply {
@@ -384,11 +389,11 @@ class PlaybackEngine(
                 setAudioAttributes(mediaAudio, true)
                 setWakeMode(C.WAKE_MODE_NETWORK)
             }
-        vocalsPlayer = ExoPlayer.Builder(context).build().apply {
+        vocalsPlayer = ExoPlayer.Builder(context, renderersFactory).build().apply {
             volume = vocalsVolume
             setAudioAttributes(mediaAudio, true)
         }
-        accPlayer = ExoPlayer.Builder(context).build().apply {
+        accPlayer = ExoPlayer.Builder(context, renderersFactory).build().apply {
             volume = accVolume
             setAudioAttributes(mediaAudio, true)
         }
