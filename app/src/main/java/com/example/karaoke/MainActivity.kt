@@ -55,12 +55,19 @@ class MainActivity : ComponentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
-            KeyEventRouter.handler?.let { handler ->
-                if (handler(event.keyCode)) return true
-            }
-            if (event.keyCode == KeyEvent.KEYCODE_BACK && KeyEventRouter.handler == null) {
-                finish()
-                return true
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_BACK -> {
+                    val consumed = KeyEventRouter.handler?.invoke(event.keyCode) ?: false
+                    if (!consumed) {
+                        finish()
+                    }
+                    return true
+                }
+                else -> {
+                    KeyEventRouter.handler?.let { handler ->
+                        if (handler(event.keyCode)) return true
+                    }
+                }
             }
         }
         return super.dispatchKeyEvent(event)

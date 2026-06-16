@@ -233,9 +233,7 @@ class PlayerViewModel(
             viewModelScope.launch { skipToNext() }
             true
         }
-        android.view.KeyEvent.KEYCODE_BACK,
-        android.view.KeyEvent.KEYCODE_DPAD_LEFT,
-        -> true // swallow
+        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> true // swallow
         else -> false
     }
 
