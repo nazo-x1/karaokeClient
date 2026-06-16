@@ -17,10 +17,23 @@ Android TV 播放端，适配新版 KTV 后端。
 ## 使用
 
 1. 安装到 Android TV
-2. 启动后输入服务端地址，如 `http://192.168.1.20:15233`
-3. 在手机/Web 控制台点歌，TV 端自动播放
+2. **首次启动**：无已保存地址时进入「首次连接」屏，输入 `http://192.168.x.x:15233` 并连接
+3. **已保存地址**：自动连接 SSE、拉取队列
+4. 按 **MENU** 打开侧边栏点歌；手机/Web RC 点歌后 TV 自动播放
 
-仅支持 Android TV。
+仅支持 Android TV（Compose for TV + Leanback Launcher）。
+
+## 架构（v2）
+
+```
+com.example.karaoke/
+├── KaraokeApp.kt          # Compose 根
+├── MainActivity.kt        # ComponentActivity + 按键分发
+├── di/AppContainer.kt
+├── data/                  # API、SSE、Repository、Prefs
+├── playback/PlaybackEngine.kt
+└── ui/                    # Setup、Player、Drawer、Theme
+```
 
 ## CI/CD
 
