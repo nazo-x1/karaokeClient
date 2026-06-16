@@ -36,7 +36,7 @@ fun KaraokeActionChip(
         modifier = Modifier
             .background(bg, RoundedCornerShape(KaraokeDimens.RadiusSm))
             .border(
-                width = if (selected) KaraokeDimens.FocusBorder else KaraokeDimens.Border,
+                width = if (selected) KaraokeDimens.FocusBorderStrong else KaraokeDimens.Border,
                 color = if (selected) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle,
                 shape = RoundedCornerShape(KaraokeDimens.RadiusSm),
             )

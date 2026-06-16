@@ -1,0 +1,2102 @@
+{
+  "version": "2.13",
+  "children": [
+    {
+      "type": "frame",
+      "id": "tvTip0",
+      "x": 40,
+      "y": 40,
+      "name": "提示 · TV 播放器",
+      "width": 600,
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvT01",
+          "fill": "$accent-primary",
+          "content": "Karaoke TV 播放端 · Wrapper 设计",
+          "fontFamily": "Geist Mono",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "tvT02",
+          "fill": "$text-secondary",
+          "textGrowth": "fixed-width",
+          "width": 552,
+          "content": "1280×720 · 主播放全屏 + 右侧滑出侧边栏\n首次启动配置服务器 → 后续自动连接\n交互以 D-pad ▲▼◀▶ OK BACK MENU 为主\n详见 UI_GUIDE.md",
+          "lineHeight": 1.5,
+          "fontFamily": "Geist",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvPg01",
+      "x": 40,
+      "y": 220,
+      "name": "页面 · 首次连接",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvL01",
+          "name": "ScreenLabel",
+          "fill": "$accent-tertiary",
+          "content": "首次连接 · 保存服务器地址",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "tvS01",
+          "name": "屏幕 · 首次连接",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "$bg-primary",
+          "cornerRadius": "$radius-xl",
+          "stroke": "$border-subtle",
+          "strokeWidth": 1,
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "tvC01",
+              "x": 360,
+              "y": 160,
+              "name": "ConnectCard",
+              "width": 560,
+              "fill": "$bg-elevated",
+              "cornerRadius": "$radius-xl",
+              "stroke": "$accent-primary",
+              "strokeWidth": 2,
+              "layout": "vertical",
+              "gap": 20,
+              "padding": 40,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "tvI01",
+                  "width": 48,
+                  "height": 48,
+                  "icon": "tv",
+                  "library": "lucide",
+                  "fill": "$accent-primary"
+                },
+                {
+                  "type": "text",
+                  "id": "tvT03",
+                  "fill": "$text-primary",
+                  "content": "连接 Karaoke 服务器",
+                  "fontFamily": "Geist",
+                  "fontSize": 28,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "tvT04",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": 480,
+                  "content": "首次使用需输入后端地址，保存后下次自动连接",
+                  "textAlign": "center",
+                  "fontFamily": "Geist",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "tvIn01",
+                  "name": "ServerInput",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "$bg-secondary",
+                  "cornerRadius": "$radius-lg",
+                  "stroke": "$accent-primary",
+                  "strokeWidth": 2,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tvT05",
+                      "fill": "$text-primary",
+                      "content": "http://192.168.1.20:15233",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 18,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tvBt01",
+                  "name": "ConnectBtn",
+                  "width": "fill_container",
+                  "height": 52,
+                  "fill": "$accent-primary",
+                  "cornerRadius": "$radius-lg",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tvT06",
+                      "fill": "$text-primary",
+                      "content": "连接",
+                      "fontFamily": "Geist",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "tvT07",
+                  "fill": "$text-muted",
+                  "content": "▲▼ 切换焦点  ·  OK 确认  ·  BACK 退出",
+                  "fontFamily": "Geist Mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvPg02",
+      "x": 1380,
+      "y": 220,
+      "name": "页面 · 主播放页",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvL02",
+          "name": "ScreenLabel",
+          "fill": "$accent-tertiary",
+          "content": "主播放页 · 空闲等待",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "tvS02",
+          "name": "屏幕 · 主播放页",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "#000000",
+          "stroke": "$border-subtle",
+          "layout": "none",
+          "children": [
+            {
+              "type": "frame",
+              "id": "tvIdle",
+              "x": 0,
+              "y": 0,
+              "name": "空闲·黑屏+居中信息",
+              "width": 1280,
+              "height": 720,
+              "fill": "#000000",
+              "layout": "vertical",
+              "gap": 16,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "tvI02",
+                  "width": 64,
+                  "height": 64,
+                  "icon": "mic",
+                  "library": "lucide",
+                  "fill": "$accent-primary"
+                },
+                {
+                  "type": "text",
+                  "id": "tvT08",
+                  "fill": "$text-primary",
+                  "content": "等待点歌",
+                  "fontFamily": "Geist",
+                  "fontSize": 32,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "tvT09",
+                  "fill": "$text-secondary",
+                  "content": "点击屏幕或按 MENU 打开点歌菜单",
+                  "fontFamily": "Geist",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "tvSt01",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "ellipse",
+                      "id": "tvDot1",
+                      "fill": "$connected",
+                      "width": 8,
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "id": "tvT10",
+                      "fill": "$text-muted",
+                      "content": "已连接 192.168.1.20:15233",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "tvHint1",
+              "x": 1080,
+              "y": 668,
+              "name": "MenuHint·辅助文字",
+              "fill": "#00000000",
+              "padding": [
+                8,
+                16
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tvT11",
+                  "fill": "$text-muted",
+                  "content": "MENU 菜单",
+                  "fontFamily": "Geist Mono",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvPg03",
+      "x": 2720,
+      "y": 220,
+      "name": "页面 · 主播放页 · 播放中",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvL03",
+          "name": "ScreenLabel",
+          "fill": "$accent-secondary",
+          "content": "主播放页 · 播放中",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "tvS03",
+          "name": "屏幕 · 播放中",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "#000000",
+          "stroke": "$border-subtle",
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "tvVid1",
+              "x": 0,
+              "y": 0,
+              "name": "VideoArea·全屏画面",
+              "fill": "#000000",
+              "width": 1280,
+              "height": 720
+            },
+            {
+              "type": "frame",
+              "id": "tvTop1",
+              "x": 0,
+              "y": 0,
+              "name": "TopBar",
+              "width": 1280,
+              "height": 72,
+              "fill": "#00000099",
+              "padding": [
+                0,
+                32
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tvT12",
+                  "fill": "$text-primary",
+                  "content": "稻香 · 周杰伦",
+                  "fontFamily": "Geist",
+                  "fontSize": 24,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "tvNx01",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tvT13",
+                      "fill": "$text-secondary",
+                      "content": "下一首：晴天",
+                      "fontFamily": "Geist",
+                      "fontSize": 16,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "ellipse",
+                      "id": "tvDot2",
+                      "fill": "$connected",
+                      "width": 8,
+                      "height": 8
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvPg04",
+      "x": 40,
+      "y": 1040,
+      "name": "页面 · 侧边栏 · 点歌",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvL04",
+          "name": "ScreenLabel",
+          "fill": "$accent-primary",
+          "content": "侧边栏 · 点歌 Tab",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "tvS04",
+          "name": "屏幕 · 侧边栏点歌",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "#000000",
+          "stroke": "$border-subtle",
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "tvDim1",
+              "x": 0,
+              "y": 0,
+              "name": "DimOverlay",
+              "fill": "#00000099",
+              "width": 860,
+              "height": 720
+            },
+            {
+              "type": "rectangle",
+              "id": "tvVid2",
+              "x": 0,
+              "y": 0,
+              "name": "VideoPeek",
+              "fill": "#000000",
+              "width": 860,
+              "height": 720
+            },
+            {
+              "type": "frame",
+              "id": "tvDr01",
+              "x": 860,
+              "y": 0,
+              "name": "DrawerPanel",
+              "width": 420,
+              "height": 720,
+              "fill": "$bg-secondary",
+              "stroke": "$border-subtle",
+              "strokeWidth": {
+                "left": 1
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "tvTabs1",
+                  "name": "TabBar",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tvTab1",
+                      "width": 140,
+                      "height": "fill_container",
+                      "fill": "$bg-hover",
+                      "stroke": "$accent-primary",
+                      "strokeWidth": {
+                        "bottom": 2
+                      },
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tvT15",
+                          "fill": "$text-primary",
+                          "content": "点歌",
+                          "fontFamily": "Geist",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tvTab2",
+                      "width": 140,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tvT16",
+                          "fill": "$text-muted",
+                          "content": "已点",
+                          "fontFamily": "Geist",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tvTab3",
+                      "width": 140,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tvT17",
+                          "fill": "$text-muted",
+                          "content": "设置",
+                          "fontFamily": "Geist",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tvSrc1",
+                  "name": "SearchBox",
+                  "width": "fill_container",
+                  "height": 48,
+                  "fill": "$bg-elevated",
+                  "cornerRadius": "$radius-lg",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "tvI03",
+                      "width": 18,
+                      "height": 18,
+                      "icon": "search",
+                      "library": "lucide",
+                      "fill": "$text-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "tvT18",
+                      "fill": "$text-muted",
+                      "content": "搜索歌曲…",
+                      "fontFamily": "Geist",
+                      "fontSize": 16,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tvLst1",
+                  "name": "SongList",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    8,
+                    16,
+                    16,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tvRow1",
+                      "name": "SongRowFocused",
+                      "width": "fill_container",
+                      "height": 56,
+                      "fill": "$bg-hover",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$accent-primary",
+                      "strokeWidth": 2,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tvT19",
+                          "fill": "$text-primary",
+                          "content": "稻香 · 周杰伦",
+                          "fontFamily": "Geist",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "tvAct1",
+                          "fill": "$accent-primary",
+                          "cornerRadius": 6,
+                          "padding": [
+                            6,
+                            12
+                          ],
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tvT20",
+                              "fill": "$text-primary",
+                              "content": "点歌",
+                              "fontFamily": "Geist",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tvRow2",
+                      "name": "SongRow",
+                      "width": "fill_container",
+                      "height": 56,
+                      "fill": "$bg-elevated",
+                      "cornerRadius": "$radius-lg",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tvT21",
+                          "fill": "$text-primary",
+                          "content": "晴天 · 周杰伦",
+                          "fontFamily": "Geist",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "tvT22",
+                          "fill": "$text-muted",
+                          "content": "OK",
+                          "fontFamily": "Geist Mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tvRow3",
+                      "name": "SongRow",
+                      "width": "fill_container",
+                      "height": 56,
+                      "fill": "$bg-elevated",
+                      "cornerRadius": "$radius-lg",
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tvT23",
+                          "fill": "$text-primary",
+                          "content": "七里香 · 周杰伦",
+                          "fontFamily": "Geist",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "tvT24",
+                          "fill": "$text-muted",
+                          "content": "OK",
+                          "fontFamily": "Geist Mono",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tvDrH1",
+                  "name": "DrawerHint",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$bg-primary",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tvT25",
+                      "fill": "$text-muted",
+                      "content": "◀ 关闭  ·  ▲▼ 选择  ·  OK 点歌",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvPg05",
+      "x": 1380,
+      "y": 1040,
+      "name": "页面 · 侧边栏 · 已点",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvL05",
+          "name": "ScreenLabel",
+          "fill": "$accent-primary",
+          "content": "侧边栏 · 已点 · 浏览态",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "tvS05",
+          "name": "屏幕 · 侧边栏已点",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "#000000",
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "tvDim2",
+              "x": 0,
+              "y": 0,
+              "fill": "#00000099",
+              "width": 860,
+              "height": 720
+            },
+            {
+              "type": "frame",
+              "id": "tvDr02",
+              "x": 860,
+              "y": 0,
+              "width": 420,
+              "height": 720,
+              "fill": "$bg-secondary",
+              "stroke": "$border-subtle",
+              "strokeWidth": {
+                "left": 1
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "tvTabs2",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hvd6E",
+                      "width": 140,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "oIgTl",
+                          "fill": "$text-muted",
+                          "content": "点歌",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bHeft",
+                      "width": 140,
+                      "height": "fill_container",
+                      "fill": "$bg-hover",
+                      "stroke": "$accent-primary",
+                      "strokeWidth": {
+                        "bottom": 2
+                      },
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "thDQt",
+                          "fill": "$text-primary",
+                          "content": "已点",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "QIzYW",
+                      "width": 140,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jj5x7",
+                          "fill": "$text-muted",
+                          "content": "设置",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tvQH1",
+                  "width": "fill_container",
+                  "padding": [
+                    16,
+                    16,
+                    8,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xsfkC",
+                      "fill": "$text-secondary",
+                      "content": "待播 3 首",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "tvQlst",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tvQf1",
+                      "name": "QueueRow·播放中",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$bg-elevated",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$accent-primary",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "kGbPG",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "$accent-secondary",
+                          "cornerRadius": 14,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "q8GQmH",
+                              "fill": "$text-primary",
+                              "content": "1",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "obAGa",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "tiBHt",
+                              "fill": "$text-primary",
+                              "content": "稻香 · 周杰伦",
+                              "fontFamily": "Inter",
+                              "fontSize": 18,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "JXL3P",
+                              "fill": "$accent-secondary",
+                              "content": "播放中",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tvQf2",
+                      "name": "QueueRow·浏览焦点",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$bg-hover",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$accent-primary",
+                      "strokeWidth": 2,
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "IEwSj",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "$bg-hover",
+                          "cornerRadius": 14,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "YNgjW",
+                              "fill": "$text-secondary",
+                              "content": "2",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "joSIW",
+                          "fill": "$text-primary",
+                          "content": "晴天 · 周杰伦",
+                          "fontFamily": "Inter",
+                          "fontSize": 18,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "EMFEK",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$bg-primary",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "SlD0G",
+                      "fill": "$text-muted",
+                      "content": "▲▼ 浏览  ·  OK 进入操作  ·  ◀ 关闭",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvPg06",
+      "x": 2720,
+      "y": 1040,
+      "name": "页面 · 侧边栏 · 设置",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvL06",
+          "fill": "$accent-primary",
+          "content": "侧边栏 · 设置 Tab",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "tvS06",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "#000000",
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "tvDim3",
+              "x": 0,
+              "y": 0,
+              "fill": "#00000099",
+              "width": 860,
+              "height": 720
+            },
+            {
+              "type": "frame",
+              "id": "tvDr03",
+              "x": 860,
+              "y": 0,
+              "width": 420,
+              "height": 720,
+              "fill": "$bg-secondary",
+              "stroke": "$border-subtle",
+              "strokeWidth": {
+                "left": 1
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "x58kCI",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "MV6ve",
+                      "width": 140,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SFfrH",
+                          "fill": "$text-muted",
+                          "content": "点歌",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FVAb0",
+                      "width": 140,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xEdBL",
+                          "fill": "$text-muted",
+                          "content": "已点",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "o3v5P",
+                      "width": 140,
+                      "height": "fill_container",
+                      "fill": "$bg-hover",
+                      "stroke": "$accent-primary",
+                      "strokeWidth": {
+                        "bottom": 2
+                      },
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "QTiNn",
+                          "fill": "$text-primary",
+                          "content": "设置",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "q6qtW",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 20,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "z0Xrc",
+                      "fill": "$text-secondary",
+                      "content": "服务器地址",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "c409P",
+                      "width": "fill_container",
+                      "height": 48,
+                      "fill": "$bg-elevated",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$accent-primary",
+                      "strokeWidth": 2,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CHxPv",
+                          "fill": "$text-primary",
+                          "content": "http://192.168.1.20:15233",
+                          "fontFamily": "Geist Mono",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "m66NuD",
+                      "width": "fill_container",
+                      "gap": 12,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "NsSYr",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$bg-elevated",
+                          "cornerRadius": "$radius-lg",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "s9Z18H",
+                              "fill": "$text-primary",
+                              "content": "测试连接",
+                              "fontFamily": "Inter",
+                              "fontSize": 16,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "q6GSqh",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$accent-primary",
+                          "cornerRadius": "$radius-lg",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "V9vaS",
+                              "fill": "$text-primary",
+                              "content": "保存并重连",
+                              "fontFamily": "Inter",
+                              "fontSize": 16,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "GMov3",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "ellipse",
+                          "id": "ft4CX",
+                          "fill": "$connected",
+                          "width": 8,
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "id": "vPTEf",
+                          "fill": "$text-muted",
+                          "content": "连接正常",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iROk8",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$bg-primary",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "AsiLJ",
+                      "fill": "$text-muted",
+                      "content": "◀ 关闭  ·  修改后保存并重连",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvSt01f",
+      "x": 40,
+      "y": 1860,
+      "name": "状态 · 准备中",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvLs1",
+          "fill": "$warning",
+          "content": "状态 · 资源准备中",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "tvSs1",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "#000000",
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "tvVd3",
+              "x": 0,
+              "y": 0,
+              "fill": "#000000",
+              "width": 1280,
+              "height": 720
+            },
+            {
+              "type": "rectangle",
+              "id": "tvOv1",
+              "x": 0,
+              "y": 0,
+              "fill": "#000000B3",
+              "width": 1280,
+              "height": 720
+            },
+            {
+              "type": "frame",
+              "id": "tvPc1",
+              "x": 440,
+              "y": 240,
+              "name": "准备中·遮罩文案",
+              "width": 400,
+              "fill": "#00000000",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "tvIc1",
+                  "width": 32,
+                  "height": 32,
+                  "icon": "loader",
+                  "library": "lucide",
+                  "fill": "$accent-primary"
+                },
+                {
+                  "type": "text",
+                  "id": "jw1Dq",
+                  "fill": "$text-primary",
+                  "content": "正在准备播放资源",
+                  "fontFamily": "Inter",
+                  "fontSize": 20,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "flVYk",
+                  "fill": "$accent-tertiary",
+                  "content": "稻香 · 周杰伦",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "OYASS",
+                  "width": "fill_container",
+                  "height": 6,
+                  "fill": "$bg-secondary",
+                  "cornerRadius": 3,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 3,
+                      "id": "T11lC",
+                      "x": 0,
+                      "y": 0,
+                      "fill": "$accent-primary",
+                      "width": 240,
+                      "height": 6
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "bjpne",
+                  "fill": "$text-secondary",
+                  "content": "转码中 62%",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvSt02f",
+      "x": 1380,
+      "y": 1860,
+      "name": "状态 · 连接失败",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvLs2",
+          "fill": "$error",
+          "content": "状态 · 连接失败",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "tvSs2",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "#000000",
+          "layout": "vertical",
+          "gap": 16,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "icon",
+              "id": "tvIc2",
+              "width": 48,
+              "height": 48,
+              "icon": "wifi-off",
+              "library": "lucide",
+              "fill": "$error"
+            },
+            {
+              "type": "text",
+              "id": "lcT0E",
+              "fill": "$text-primary",
+              "content": "无法连接服务器",
+              "fontFamily": "Inter",
+              "fontSize": 28,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "f1zip",
+              "fill": "$text-secondary",
+              "content": "请检查地址与网络，按 MENU 打开设置",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "b0wZh",
+              "fill": "$accent-primary",
+              "cornerRadius": "$radius-lg",
+              "padding": [
+                12,
+                32
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Rdedf",
+                  "fill": "$text-primary",
+                  "content": "打开设置",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tvTip1",
+      "x": 2720,
+      "y": 1860,
+      "name": "提示 · 遥控器映射",
+      "width": 1280,
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "tvTm1",
+          "fill": "$accent-tertiary",
+          "content": "遥控器交互映射",
+          "fontFamily": "Geist Mono",
+          "fontSize": 13,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "Q53Hi",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "H4DIs",
+              "fill": "$text-primary",
+              "content": "主播放页：MENU 打开侧边栏 · OK 播放暂停 · BACK 无操作",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "IIFkJ",
+              "fill": "$text-primary",
+              "content": "侧边栏：◀ BACK 关闭 · ◀▶ 切换 Tab · ▲▼ 列表导航 · OK 确认",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "ScvSU",
+              "fill": "$text-primary",
+              "content": "首次连接：▲▼ 输入框/按钮 · OK 连接 · BACK 退出 App",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "Mznrs",
+              "fill": "$text-primary",
+              "content": "设置 Tab：修改地址 → 测试连接 → 保存并重连 SSE",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "M6ThP",
+              "fill": "$text-secondary",
+              "content": "焦点样式：2px accent-primary 描边 + bg-hover 背景",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "pob8E",
+              "name": "QueueBrowseHint",
+              "fill": "$text-primary",
+              "content": "已点·浏览态：▲▼ 切换歌曲 · OK 进入操作 · 仅查看无按钮",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "KMzqS",
+              "name": "QueueActionHint",
+              "fill": "$text-primary",
+              "content": "已点·操作态：◀▶ 切换置顶/移除（默认置顶） · OK 确认 · ◀ 返回浏览",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "qtG07",
+      "x": 4060,
+      "y": 1040,
+      "name": "页面 · 侧边栏 · 已点 · 操作态",
+      "fill": "#0E0E16FF",
+      "cornerRadius": 12,
+      "stroke": "$border-subtle",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 8,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "KA5kk",
+          "name": "ScreenLabel",
+          "fill": "$accent-primary",
+          "content": "侧边栏 · 已点 · 操作态",
+          "fontFamily": "Geist Mono",
+          "fontSize": 11,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "R0LfV",
+          "name": "屏幕 · 侧边栏已点",
+          "clip": true,
+          "width": 1280,
+          "height": 720,
+          "fill": "#000000",
+          "cornerRadius": "$radius-xl",
+          "layout": "none",
+          "children": [
+            {
+              "type": "rectangle",
+              "id": "T4xSP",
+              "x": 0,
+              "y": 0,
+              "fill": "#00000099",
+              "width": 860,
+              "height": 720
+            },
+            {
+              "type": "frame",
+              "id": "MEdFo",
+              "x": 860,
+              "y": 0,
+              "width": 420,
+              "height": 720,
+              "fill": "$bg-secondary",
+              "stroke": "$border-subtle",
+              "strokeWidth": {
+                "left": 1
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "DZOUv",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nyjG3",
+                      "width": 140,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "KTgGA",
+                          "fill": "$text-muted",
+                          "content": "点歌",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "MFjEH",
+                      "width": 140,
+                      "height": "fill_container",
+                      "fill": "$bg-hover",
+                      "stroke": "$accent-primary",
+                      "strokeWidth": {
+                        "bottom": 2
+                      },
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "fMRdI",
+                          "fill": "$text-primary",
+                          "content": "已点",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "OjV8X",
+                      "width": 140,
+                      "height": "fill_container",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Z87OFn",
+                          "fill": "$text-muted",
+                          "content": "设置",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iPlWY",
+                  "width": "fill_container",
+                  "padding": [
+                    16,
+                    16,
+                    8,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "xuj2a",
+                      "fill": "$text-secondary",
+                      "content": "待播 3 首",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "K1pPN5",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "jjXsz",
+                      "name": "QueueRow·播放中",
+                      "width": "fill_container",
+                      "height": 64,
+                      "fill": "$bg-elevated",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "#00000000",
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        16
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "jl5yd",
+                          "width": 28,
+                          "height": 28,
+                          "fill": "$accent-secondary",
+                          "cornerRadius": 14,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "paeZj",
+                              "fill": "$text-primary",
+                              "content": "1",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fZrQM",
+                          "width": "fill_container",
+                          "layout": "vertical",
+                          "gap": 2,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "OkRtq",
+                              "fill": "$text-primary",
+                              "content": "稻香 · 周杰伦",
+                              "fontFamily": "Inter",
+                              "fontSize": 18,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "i3NIt",
+                              "fill": "$accent-secondary",
+                              "content": "播放中",
+                              "fontFamily": "Inter",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bYaFQ",
+                      "name": "QueueRow·操作态",
+                      "width": "fill_container",
+                      "fill": "$bg-hover",
+                      "cornerRadius": "$radius-lg",
+                      "stroke": "$accent-primary",
+                      "strokeWidth": 2,
+                      "layout": "vertical",
+                      "gap": 10,
+                      "padding": [
+                        12,
+                        16
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "PLVEm",
+                          "name": "RowHeader",
+                          "width": "fill_container",
+                          "gap": 12,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "doKYV",
+                              "width": 28,
+                              "height": 28,
+                              "fill": "$bg-elevated",
+                              "cornerRadius": 14,
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "g8msEk",
+                                  "fill": "$text-secondary",
+                                  "content": "2",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "NkYSb",
+                              "name": "SongTitle",
+                              "fill": "$text-primary",
+                              "content": "晴天 · 周杰伦",
+                              "fontFamily": "Inter",
+                              "fontSize": 18,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "CIoYP",
+                          "name": "ActionBar",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "RxPNP",
+                              "name": "BtnTop·默认焦点",
+                              "fill": "$accent-primary",
+                              "cornerRadius": 6,
+                              "stroke": "$accent-primary",
+                              "strokeWidth": 2,
+                              "padding": [
+                                8,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "KfGXV",
+                                  "fill": "$text-primary",
+                                  "content": "置顶",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "600"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "IgL8n",
+                              "name": "BtnRemove·未选中",
+                              "fill": "$bg-elevated",
+                              "cornerRadius": 6,
+                              "padding": [
+                                8,
+                                20
+                              ],
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "QCbL6",
+                                  "fill": "$text-muted",
+                                  "content": "移除",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "Hh5W3",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$bg-primary",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PkIxy",
+                      "fill": "$text-muted",
+                      "content": "◀▶ 切换  ·  OK 确认  ·  ◀ 返回列表",
+                      "fontFamily": "Geist Mono",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "bg-primary": {
+      "type": "color",
+      "value": "#0B0B12FF"
+    },
+    "bg-secondary": {
+      "type": "color",
+      "value": "#14141FFF"
+    },
+    "bg-elevated": {
+      "type": "color",
+      "value": "#1C1C2EFF"
+    },
+    "bg-hover": {
+      "type": "color",
+      "value": "#2E2840FF"
+    },
+    "border-subtle": {
+      "type": "color",
+      "value": "#2A2A3DFF"
+    },
+    "text-primary": {
+      "type": "color",
+      "value": "#F5F5F7FF"
+    },
+    "text-secondary": {
+      "type": "color",
+      "value": "#9494A8FF"
+    },
+    "text-muted": {
+      "type": "color",
+      "value": "#5C5C72FF"
+    },
+    "accent-primary": {
+      "type": "color",
+      "value": "#A855F7FF"
+    },
+    "accent-secondary": {
+      "type": "color",
+      "value": "#EC4899FF"
+    },
+    "accent-tertiary": {
+      "type": "color",
+      "value": "#06B6D4FF"
+    },
+    "connected": {
+      "type": "color",
+      "value": "#69F0AEFF"
+    },
+    "error": {
+      "type": "color",
+      "value": "#FF5252FF"
+    },
+    "warning": {
+      "type": "color",
+      "value": "#FFD740FF"
+    },
+    "radius-lg": {
+      "type": "number",
+      "value": 8
+    },
+    "radius-xl": {
+      "type": "number",
+      "value": 12
+    }
+  }
+}
