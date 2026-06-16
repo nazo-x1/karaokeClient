@@ -1,5 +1,6 @@
 package com.example.karaoke.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -9,7 +10,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Surface
 import com.example.karaoke.ui.theme.KaraokeColors
 import kotlinx.coroutines.delay
 
@@ -29,16 +29,13 @@ fun KaraokeToast(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        Surface(
-            modifier = Modifier.padding(bottom = 48.dp),
-            shape = RoundedCornerShape(8.dp),
-            color = KaraokeColors.BgElevated,
+        Box(
+            modifier = Modifier
+                .padding(bottom = 48.dp)
+                .background(KaraokeColors.BgElevated, RoundedCornerShape(8.dp))
+                .padding(horizontal = 24.dp, vertical = 12.dp),
         ) {
-            KaraokeText(
-                text = message,
-                style = KaraokeTextStyle.Body,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-            )
+            KaraokeText(text = message, style = KaraokeTextStyle.Body)
         }
     }
 }

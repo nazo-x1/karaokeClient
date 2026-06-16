@@ -5,6 +5,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
@@ -28,7 +30,12 @@ fun KaraokeApp(container: AppContainer) {
     KaraokeTheme {
         val appViewModel: AppViewModel = viewModel(
             factory = remember(container) {
-                androidx.lifecycle.ViewModelProvider.Factory { AppViewModel(container.repository) }
+                object : ViewModelProvider.Factory {
+                    @Suppress("UNCHECKED_CAST")
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        return AppViewModel(container.repository) as T
+                    }
+                }
             },
         )
         val phase by appViewModel.phase.collectAsStateWithLifecycle()
@@ -62,13 +69,16 @@ private fun PlayerRoot(container: AppContainer) {
     val context = LocalContext.current
     val playerViewModel: PlayerViewModel = viewModel(
         factory = remember(container) {
-            androidx.lifecycle.ViewModelProvider.Factory {
-                PlayerViewModel(
-                    container.repository,
-                    container.settings,
-                    container.playbackEngine,
-                    container.uiMessenger,
-                )
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return PlayerViewModel(
+                        container.repository,
+                        container.settings,
+                        container.playbackEngine,
+                        container.uiMessenger,
+                    ) as T
+                }
             }
         },
     )

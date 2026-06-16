@@ -1,10 +1,11 @@
 package com.example.karaoke.ui.theme
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
 import androidx.tv.material3.darkColorScheme
 
 private val KaraokeColorScheme = darkColorScheme(
@@ -20,7 +21,11 @@ private val KaraokeColorScheme = darkColorScheme(
 @Composable
 fun KaraokeTheme(content: @Composable () -> Unit) {
     MaterialTheme(colorScheme = KaraokeColorScheme) {
-        Surface(modifier = Modifier.fillMaxSize(), color = KaraokeColors.BgPrimary) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(KaraokeColors.BgPrimary),
+        ) {
             content()
         }
     }

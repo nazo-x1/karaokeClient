@@ -10,7 +10,9 @@ import com.example.karaoke.ui.UiMessenger
 import com.google.gson.Gson
 
 class AppContainer(context: Context) {
-    val settings = SettingsStore(context.applicationContext)
+    private val appContext: Context = context.applicationContext
+
+    val settings = SettingsStore(appContext)
     val uiMessenger = UiMessenger()
     private val gson = Gson()
     private val client = KaraokeApi.createDefaultClient()
@@ -23,7 +25,7 @@ class AppContainer(context: Context) {
 
     fun initPlayback() {
         playbackEngine = PlaybackEngine(
-            context.applicationContext,
+            appContext,
             repository,
             uiMessenger::show,
         )
