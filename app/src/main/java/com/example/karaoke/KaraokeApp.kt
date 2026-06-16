@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -24,10 +25,13 @@ object KeyEventRouter {
 }
 
 @Composable
-fun KaraokeApp(container: AppContainer) {
+fun KaraokeApp(
+    container: AppContainer,
+    modifier: Modifier = Modifier,
+) {
     val toastMessage by container.uiMessenger.message.collectAsStateWithLifecycle()
 
-    KaraokeTheme {
+    KaraokeTheme(modifier = modifier) {
         val appViewModel: AppViewModel = viewModel(
             factory = remember(container) {
                 object : ViewModelProvider.Factory {
@@ -57,6 +61,7 @@ fun KaraokeApp(container: AppContainer) {
             AppPhase.Player -> PlayerRoot(container)
         }
 
+        // Toast 仅在 message 非空时渲染，不遮挡触摸
         KaraokeToast(
             message = toastMessage,
             onDismiss = container.uiMessenger::dismiss,

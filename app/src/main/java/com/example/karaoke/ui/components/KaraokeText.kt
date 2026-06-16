@@ -1,11 +1,12 @@
 package com.example.karaoke.ui.components
 
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
-import androidx.tv.material3.Text
 import com.example.karaoke.ui.theme.KaraokeColors
 import com.example.karaoke.ui.theme.KaraokeTypography
 
@@ -45,11 +46,13 @@ fun KaraokeText(
             defaultColor = KaraokeColors.Error
         }
     }
-    Text(
+    BasicText(
         text = text,
         modifier = modifier,
-        color = color ?: defaultColor,
-        fontSize = fontSize,
-        fontWeight = fontWeight,
+        style = TextStyle(
+            color = color ?: defaultColor,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+        ),
     )
 }

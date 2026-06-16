@@ -19,11 +19,14 @@ private val KaraokeColorScheme = darkColorScheme(
 )
 
 @Composable
-fun KaraokeTheme(content: @Composable () -> Unit) {
+fun KaraokeTheme(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
     MaterialTheme(colorScheme = KaraokeColorScheme) {
         KaraokeScaleProvider {
             Box(
-                modifier = Modifier
+                modifier = modifier
                     .fillMaxSize()
                     .background(KaraokeColors.BgPrimary),
             ) {

@@ -7,6 +7,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -29,10 +30,13 @@ val LocalKaraokeScale = compositionLocalOf { KaraokeScale(1f) }
 
 @Composable
 fun KaraokeScaleProvider(content: @Composable () -> Unit) {
+    val configuration = LocalConfiguration.current
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val widthDp = if (maxWidth.value > 0f) maxWidth.value else configuration.screenWidthDp.toFloat()
+        val heightDp = if (maxHeight.value > 0f) maxHeight.value else configuration.screenHeightDp.toFloat()
         val factor = min(
-            maxWidth.value / DesignCanvas.WIDTH,
-            maxHeight.value / DesignCanvas.HEIGHT,
+            widthDp / DesignCanvas.WIDTH,
+            heightDp / DesignCanvas.HEIGHT,
         ).coerceIn(0.55f, 1.85f)
         CompositionLocalProvider(LocalKaraokeScale provides KaraokeScale(factor)) {
             content()

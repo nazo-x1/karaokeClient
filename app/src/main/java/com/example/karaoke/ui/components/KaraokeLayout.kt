@@ -3,6 +3,7 @@ package com.example.karaoke.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,13 +22,15 @@ import com.example.karaoke.ui.theme.wdp
 @Composable
 fun KaraokeScreen(
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
+    contentAlignment: Alignment = Alignment.TopStart,
+    content: @Composable BoxScope.() -> Unit,
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(KaraokeColors.BgPrimary),
-        content = { content() },
+        contentAlignment = contentAlignment,
+        content = content,
     )
 }
 

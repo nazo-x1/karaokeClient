@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import com.example.karaoke.ui.theme.KaraokeColors
 import com.example.karaoke.ui.theme.KaraokeDimens
 import com.example.karaoke.ui.theme.KaraokeTypography
@@ -22,6 +25,7 @@ fun KaraokeTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     singleLine: Boolean = true,
+    onSubmit: (() -> Unit)? = null,
 ) {
     BasicTextField(
         value = value,
@@ -37,6 +41,12 @@ fun KaraokeTextField(
         ),
         cursorBrush = SolidColor(KaraokeColors.AccentPrimary),
         singleLine = singleLine,
+        keyboardOptions = KeyboardOptions(
+            imeAction = if (onSubmit != null) ImeAction.Done else ImeAction.Default,
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = { onSubmit?.invoke() },
+        ),
         decorationBox = { inner ->
             Box {
                 if (value.isEmpty() && placeholder.isNotEmpty()) {

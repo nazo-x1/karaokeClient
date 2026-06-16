@@ -1,7 +1,6 @@
 package com.example.karaoke.ui.setup
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -30,40 +29,40 @@ fun SetupScreen(
     onConnect: (String) -> Unit,
 ) {
     var url by remember(initialUrl) { mutableStateOf(initialUrl) }
+    val submit = { onConnect(url) }
 
-    KaraokeScreen {
-        Box(contentAlignment = Alignment.Center) {
-            Column(
-                modifier = Modifier.width(KaraokeDimens.SetupCardWidth),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceMd),
-            ) {
-                KaraokeCard {
-                    KaraokeText(text = "连接 KTV 服务器", style = KaraokeTextStyle.Title)
+    KaraokeScreen(contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier.width(KaraokeDimens.SetupCardWidth),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceMd),
+        ) {
+            KaraokeCard {
+                KaraokeText(text = "连接 KTV 服务器", style = KaraokeTextStyle.Title)
+                Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
+                KaraokeText(
+                    text = "请输入局域网服务器地址，例如 http://192.168.1.20:15233",
+                    style = KaraokeTextStyle.Hint,
+                )
+                Spacer(modifier = Modifier.height(KaraokeDimens.SpaceMd))
+                KaraokeTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    placeholder = "http://192.168.x.x:15233",
+                    onSubmit = submit,
+                )
+                if (error != null) {
                     Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
-                    KaraokeText(
-                        text = "请输入局域网服务器地址，例如 http://192.168.1.20:15233",
-                        style = KaraokeTextStyle.Hint,
-                    )
-                    Spacer(modifier = Modifier.height(KaraokeDimens.SpaceMd))
-                    KaraokeTextField(
-                        value = url,
-                        onValueChange = { url = it },
-                        placeholder = "http://192.168.x.x:15233",
-                    )
-                    if (error != null) {
-                        Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
-                        KaraokeText(text = error, style = KaraokeTextStyle.Error)
-                    }
-                    Spacer(modifier = Modifier.height(KaraokeDimens.SpaceMd))
-                    KaraokeLoadingButton(
-                        text = "连接",
-                        loading = connecting,
-                        onClick = { onConnect(url) },
-                    )
+                    KaraokeText(text = error, style = KaraokeTextStyle.Error)
                 }
-                KaraokeHintBar("◀ 后退退出应用")
+                Spacer(modifier = Modifier.height(KaraokeDimens.SpaceMd))
+                KaraokeLoadingButton(
+                    text = "连接",
+                    loading = connecting,
+                    onClick = submit,
+                )
             }
+            KaraokeHintBar("◀ 后退退出应用")
         }
     }
 }

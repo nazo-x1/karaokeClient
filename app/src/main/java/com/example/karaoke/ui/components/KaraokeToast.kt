@@ -27,6 +27,7 @@ fun KaraokeToast(
         }
     }
     if (message == null) return
+    // 仅占底部区域，不拦截全屏触摸
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter,

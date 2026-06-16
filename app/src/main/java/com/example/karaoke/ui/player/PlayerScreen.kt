@@ -101,22 +101,20 @@ fun PlayerScreen(
         }
 
         if (!state.drawerOpen) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                KaraokeText(
-                    text = "菜单",
-                    style = KaraokeTextStyle.Body,
-                    color = KaraokeColors.TextPrimary,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(KaraokeDimens.SpaceLg)
-                        .background(
-                            KaraokeColors.BgElevated.copy(alpha = 0.9f),
-                            RoundedCornerShape(KaraokeDimens.RadiusSm),
-                        )
-                        .clickable { onToggleDrawer(true) }
-                        .padding(horizontal = KaraokeDimens.SpaceMd, vertical = KaraokeDimens.SpaceSm),
-                )
-            }
+            KaraokeText(
+                text = "菜单",
+                style = KaraokeTextStyle.Body,
+                color = KaraokeColors.TextPrimary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(KaraokeDimens.SpaceLg)
+                    .background(
+                        KaraokeColors.BgElevated.copy(alpha = 0.9f),
+                        RoundedCornerShape(KaraokeDimens.RadiusSm),
+                    )
+                    .clickable { onToggleDrawer(true) }
+                    .padding(horizontal = KaraokeDimens.SpaceMd, vertical = KaraokeDimens.SpaceSm),
+            )
         }
 
         if (state.drawerOpen) {
