@@ -3,11 +3,12 @@ package com.example.karaoke.ui.drawer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,35 +16,30 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.tv.foundation.lazy.list.TvLazyColumn
+import androidx.tv.foundation.lazy.list.itemsIndexed
 import com.example.karaoke.data.remote.dto.QueueItem
 import com.example.karaoke.data.remote.dto.SongItem
+import com.example.karaoke.ui.components.KaraokeActionChip
+import com.example.karaoke.ui.components.KaraokeButton
+import com.example.karaoke.ui.components.KaraokeButtonVariant
+import com.example.karaoke.ui.components.KaraokeFocusableRow
+import com.example.karaoke.ui.components.KaraokeHintBar
+import com.example.karaoke.ui.components.KaraokeText
+import com.example.karaoke.ui.components.KaraokeTextField
+import com.example.karaoke.ui.components.KaraokeTextStyle
 import com.example.karaoke.ui.navigation.DrawerTab
 import com.example.karaoke.ui.navigation.QueueAction
 import com.example.karaoke.ui.navigation.QueueInteractionMode
 import com.example.karaoke.ui.player.PlayerUiState
 import com.example.karaoke.ui.theme.KaraokeColors
 import com.example.karaoke.ui.theme.KaraokeDimens
-import com.example.karaoke.ui.theme.KaraokeTypography
 
 @Composable
 fun DrawerPanel(
@@ -75,10 +71,7 @@ fun DrawerPanel(
                     .background(KaraokeColors.BgSecondary)
                     .border(width = 1.dp, color = KaraokeColors.BorderSubtle),
             ) {
-                DrawerTabs(
-                    selected = state.drawerTab,
-                    onTabSelected = onTabSelected,
-                )
+                DrawerTabs(selected = state.drawerTab, onTabSelected = onTabSelected)
                 Box(modifier = Modifier.weight(1f).padding(16.dp)) {
                     when (state.drawerTab) {
                         DrawerTab.Library -> LibraryTabContent(
@@ -124,10 +117,10 @@ private fun DrawerTabs(selected: DrawerTab, onTabSelected: (DrawerTab) -> Unit) 
     ) {
         DrawerTab.entries.forEach { tab ->
             val isSelected = tab == selected
-            Text(
+            KaraokeText(
                 text = tab.label,
+                style = KaraokeTextStyle.List,
                 color = if (isSelected) KaraokeColors.AccentPrimary else KaraokeColors.TextSecondary,
-                fontSize = KaraokeTypography.List,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 modifier = Modifier
                     .padding(12.dp)
@@ -155,40 +148,27 @@ private fun LibraryTabContent(
     onEnqueue: (Int) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        BasicTextField(
+        KaraokeTextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(KaraokeColors.BgElevated, RoundedCornerShape(8.dp))
-                .border(1.dp, KaraokeColors.BorderSubtle, RoundedCornerShape(8.dp))
-                .padding(12.dp),
-            textStyle = TextStyle(color = KaraokeColors.TextPrimary, fontSize = KaraokeTypography.Body),
-            cursorBrush = SolidColor(KaraokeColors.AccentPrimary),
-            decorationBox = { inner ->
-                if (query.isEmpty()) {
-                    Text("搜索歌曲", color = KaraokeColors.TextSecondary, fontSize = KaraokeTypography.Body)
-                }
-                inner()
-            },
+            placeholder = "搜索歌曲",
         )
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        TvLazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             itemsIndexed(songs) { _, song ->
-                FocusableRow(onClick = { onEnqueue(song.id) }) {
-                    Text(
+                KaraokeFocusableRow(onClick = { onEnqueue(song.id) }) {
+                    KaraokeText(
                         text = song.display_name,
-                        color = KaraokeColors.TextPrimary,
-                        fontSize = KaraokeTypography.List,
+                        style = KaraokeTextStyle.List,
                         modifier = Modifier.weight(1f),
                     )
-                    Text("+ 点歌", color = KaraokeColors.AccentPrimary, fontSize = KaraokeTypography.Body)
+                    KaraokeText(text = "+ 点歌", style = KaraokeTextStyle.Body, color = KaraokeColors.AccentPrimary)
                 }
             }
             if (hasMore && !loading) {
                 item {
-                    Text(
+                    KaraokeText(
                         text = "滚动加载更多",
-                        color = KaraokeColors.TextSecondary,
+                        style = KaraokeTextStyle.Hint,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onLoadMore() }
@@ -198,10 +178,7 @@ private fun LibraryTabContent(
             }
             if (loading) {
                 item {
-                    CircularProgressIndicator(
-                        color = KaraokeColors.AccentPrimary,
-                        modifier = Modifier.padding(8.dp),
-                    )
+                    KaraokeText(text = "加载中…", style = KaraokeTextStyle.Hint, modifier = Modifier.padding(8.dp))
                 }
             }
         }
@@ -217,11 +194,11 @@ private fun QueueTabContent(
 ) {
     if (queue.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("暂无已点歌曲", color = KaraokeColors.TextSecondary, fontSize = KaraokeTypography.Body)
+            KaraokeText(text = "暂无已点歌曲", style = KaraokeTextStyle.Hint)
         }
         return
     }
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    TvLazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         itemsIndexed(queue) { index, item ->
             val focused = index == focusIndex
             val borderColor = if (focused) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle
@@ -236,36 +213,31 @@ private fun QueueTabContent(
                     .padding(12.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
+                    KaraokeText(
                         text = "${index + 1}.",
-                        color = KaraokeColors.TextSecondary,
-                        fontSize = KaraokeTypography.Body,
+                        style = KaraokeTextStyle.Hint,
                         modifier = Modifier.width(28.dp),
                     )
-                    Text(
+                    KaraokeText(
                         text = item.name,
-                        color = KaraokeColors.TextPrimary,
-                        fontSize = KaraokeTypography.List,
+                        style = KaraokeTextStyle.List,
                         modifier = Modifier.weight(1f),
                     )
-                    Text(
+                    KaraokeText(
                         text = when {
                             item.isPlaying() -> "播放中"
                             item.isPending() -> "等待"
                             else -> item.state
                         },
+                        style = KaraokeTextStyle.Body,
                         color = if (item.isPlaying()) KaraokeColors.Connected else KaraokeColors.TextSecondary,
-                        fontSize = KaraokeTypography.Body,
                     )
                 }
                 if (focused && mode == QueueInteractionMode.Action && !item.isPlaying()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ActionChip(
-                            label = "置顶",
-                            selected = action == QueueAction.Top,
-                        )
-                        ActionChip(
+                        KaraokeActionChip(label = "置顶", selected = action == QueueAction.Top)
+                        KaraokeActionChip(
                             label = "移除",
                             selected = action == QueueAction.Remove,
                             secondary = true,
@@ -275,28 +247,6 @@ private fun QueueTabContent(
             }
         }
     }
-}
-
-@Composable
-private fun ActionChip(label: String, selected: Boolean, secondary: Boolean = false) {
-    val bg = when {
-        selected -> KaraokeColors.AccentPrimary
-        secondary -> KaraokeColors.BgSecondary
-        else -> KaraokeColors.BgHover
-    }
-    val fg = when {
-        selected -> KaraokeColors.TextPrimary
-        secondary -> KaraokeColors.TextSecondary
-        else -> KaraokeColors.TextPrimary
-    }
-    Text(
-        text = label,
-        color = fg,
-        fontSize = KaraokeTypography.Body,
-        modifier = Modifier
-            .background(bg, RoundedCornerShape(6.dp))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    )
 }
 
 @Composable
@@ -310,34 +260,24 @@ private fun SettingsTabContent(
     onSave: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("服务器地址", color = KaraokeColors.TextSecondary, fontSize = KaraokeTypography.Body)
-        BasicTextField(
-            value = url,
-            onValueChange = onUrlChange,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(KaraokeColors.BgElevated, RoundedCornerShape(8.dp))
-                .border(1.dp, KaraokeColors.BorderSubtle, RoundedCornerShape(8.dp))
-                .padding(12.dp),
-            textStyle = TextStyle(color = KaraokeColors.TextPrimary, fontSize = KaraokeTypography.Body),
-            cursorBrush = SolidColor(KaraokeColors.AccentPrimary),
-            singleLine = true,
-        )
-        Text("当前：$savedUrl", color = KaraokeColors.TextSecondary, fontSize = KaraokeTypography.Hint)
+        KaraokeText(text = "服务器地址", style = KaraokeTextStyle.Hint)
+        KaraokeTextField(value = url, onValueChange = onUrlChange)
+        KaraokeText(text = "当前：$savedUrl", style = KaraokeTextStyle.Hint)
         if (error != null) {
-            Text(error, color = KaraokeColors.Error, fontSize = KaraokeTypography.Body)
+            KaraokeText(text = error, style = KaraokeTextStyle.Error)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(
+            KaraokeButton(
+                text = "测试连接",
                 onClick = onTest,
                 enabled = !testing,
-                colors = ButtonDefaults.buttonColors(containerColor = KaraokeColors.BgElevated),
-            ) { Text("测试连接") }
-            Button(
+                variant = KaraokeButtonVariant.Secondary,
+            )
+            KaraokeButton(
+                text = "保存并重连",
                 onClick = onSave,
                 enabled = !testing,
-                colors = ButtonDefaults.buttonColors(containerColor = KaraokeColors.AccentPrimary),
-            ) { Text("保存并重连") }
+            )
         }
     }
 }
@@ -352,37 +292,5 @@ private fun DrawerHintBar(state: PlayerUiState) {
         }
         DrawerTab.Settings -> "◀ 关闭 · OK 保存"
     }
-    Text(
-        text = hint,
-        color = KaraokeColors.TextSecondary,
-        fontSize = KaraokeTypography.Hint,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(KaraokeColors.BgElevated)
-            .padding(12.dp),
-    )
-}
-
-@Composable
-private fun FocusableRow(onClick: () -> Unit, content: @Composable Row.() -> Unit) {
-    var focused by remember { mutableStateOf(false) }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (focused) KaraokeColors.BgHover else KaraokeColors.BgElevated,
-                RoundedCornerShape(8.dp),
-            )
-            .border(
-                width = if (focused) KaraokeDimens.FocusBorder else 1.dp,
-                color = if (focused) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .onFocusChanged { focused = it.isFocused }
-            .focusable()
-            .clickable { onClick() }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        content = content,
-    )
+    KaraokeHintBar(text = hint)
 }

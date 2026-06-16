@@ -3,7 +3,6 @@ package com.example.karaoke
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.example.karaoke.di.AppContainer
@@ -17,15 +16,10 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         container = AppContainer(this)
-        container.initPlayback { msg ->
-            runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
-        }
+        container.initPlayback()
 
         setContent {
-            KaraokeApp(
-                container = container,
-                onToast = { msg -> Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() },
-            )
+            KaraokeApp(container = container)
         }
     }
 

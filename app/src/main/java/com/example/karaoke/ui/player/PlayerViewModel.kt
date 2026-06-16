@@ -9,6 +9,7 @@ import com.example.karaoke.data.remote.dto.SongItem
 import com.example.karaoke.playback.PlaybackEngine
 import com.example.karaoke.playback.PlaybackState
 import com.example.karaoke.playback.PrepareProgress
+import com.example.karaoke.ui.UiMessenger
 import com.example.karaoke.ui.navigation.DrawerTab
 import com.example.karaoke.ui.navigation.QueueAction
 import com.example.karaoke.ui.navigation.QueueInteractionMode
@@ -29,7 +30,6 @@ data class PlayerUiState(
     val overlayVisible: Boolean = true,
     val playbackState: PlaybackState = PlaybackState.Idle,
     val prepareProgress: PrepareProgress? = null,
-    val toastMessage: String? = null,
     // Library tab
     val libraryQuery: String = "",
     val librarySongs: List<SongItem> = emptyList(),
@@ -50,6 +50,7 @@ class PlayerViewModel(
     private val repository: KaraokeRepository,
     private val settings: SettingsStore,
     val playbackEngine: PlaybackEngine,
+    private val uiMessenger: UiMessenger,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlayerUiState(settingsUrl = settings.server))
@@ -104,14 +105,6 @@ class PlayerViewModel(
                 startSse()
             }
         }
-    }
-
-    fun dismissToast() {
-        _uiState.update { it.copy(toastMessage = null) }
-    }
-
-    fun showToast(msg: String) {
-        _uiState.update { it.copy(toastMessage = msg) }
     }
 
     fun toggleDrawer(open: Boolean? = null) {
@@ -352,7 +345,7 @@ class PlayerViewModel(
                 },
                 onFailure = {
                     _uiState.update { it.copy(libraryLoading = false) }
-                    showToast(it.message ?: "加载曲库失败")
+                    uiMessenger.show(it.message ?: "加载曲库失败")
                 },
             )
         }
@@ -361,8 +354,8 @@ class PlayerViewModel(
     fun enqueueSong(songId: Int) {
         viewModelScope.launch {
             repository.enqueue(songId).fold(
-                onSuccess = { showToast("已点歌") },
-                onFailure = { showToast(it.message ?: "点歌失败") },
+                onSuccess = { uiMessenger.show("已点歌") },
+                onFailure = { uiMessenger.show(it.message ?: "点歌失败") },
             )
         }
     }
@@ -415,7 +408,7 @@ class PlayerViewModel(
                     settingsError = null,
                 )
             }
-            showToast("已保存并重连")
+            uiMessenger.show("已保存并重连")
         }
     }
 

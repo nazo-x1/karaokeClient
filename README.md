@@ -27,12 +27,16 @@ Android TV 播放端，适配新版 KTV 后端。
 
 ```
 com.example.karaoke/
-├── KaraokeApp.kt          # Compose 根
+├── KaraokeApp.kt          # Compose 根 + KaraokeTheme
 ├── MainActivity.kt        # ComponentActivity + 按键分发
 ├── di/AppContainer.kt
 ├── data/                  # API、SSE、Repository、Prefs
 ├── playback/PlaybackEngine.kt
-└── ui/                    # Setup、Player、Drawer、Theme
+└── ui/
+    ├── components/        # 统一 TV 组件（Text/Button/Card/Toast…）
+    ├── theme/             # KaraokeTheme + Design Tokens
+    ├── setup/ player/ drawer/
+    └── UiMessenger.kt     # 应用内消息（替代 Toast）
 ```
 
 ## CI/CD

@@ -1,74 +1,64 @@
 package com.example.karaoke
 
-import android.content.Context
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.ui.PlayerView
 import com.example.karaoke.di.AppContainer
 import com.example.karaoke.ui.AppViewModel
+import com.example.karaoke.ui.components.KaraokeToast
 import com.example.karaoke.ui.navigation.AppPhase
 import com.example.karaoke.ui.player.PlayerScreen
 import com.example.karaoke.ui.player.PlayerViewModel
 import com.example.karaoke.ui.setup.SetupScreen
-import com.example.karaoke.ui.theme.KaraokeColors
+import com.example.karaoke.ui.theme.KaraokeTheme
 
 object KeyEventRouter {
     var handler: ((Int) -> Boolean)? = null
 }
 
 @Composable
-fun KaraokeApp(
-    container: AppContainer,
-    onToast: (String) -> Unit,
-) {
-    val darkScheme = darkColorScheme(
-        primary = KaraokeColors.AccentPrimary,
-        background = KaraokeColors.BgPrimary,
-        surface = KaraokeColors.BgSecondary,
-    )
+fun KaraokeApp(container: AppContainer) {
+    val toastMessage by container.uiMessenger.message.collectAsStateWithLifecycle()
 
-    MaterialTheme(colorScheme = darkScheme) {
-        Surface(modifier = Modifier.fillMaxSize(), color = KaraokeColors.BgPrimary) {
-            val appViewModel: AppViewModel = viewModel(
-                factory = remember(container) {
-                    androidx.lifecycle.ViewModelProvider.Factory { AppViewModel(container.repository) }
-                },
-            )
-            val phase by appViewModel.phase.collectAsStateWithLifecycle()
-            val connecting by appViewModel.connecting.collectAsStateWithLifecycle()
-            val setupError by appViewModel.setupError.collectAsStateWithLifecycle()
+    KaraokeTheme {
+        val appViewModel: AppViewModel = viewModel(
+            factory = remember(container) {
+                androidx.lifecycle.ViewModelProvider.Factory { AppViewModel(container.repository) }
+            },
+        )
+        val phase by appViewModel.phase.collectAsStateWithLifecycle()
+        val connecting by appViewModel.connecting.collectAsStateWithLifecycle()
+        val setupError by appViewModel.setupError.collectAsStateWithLifecycle()
 
-            DisposableEffect(phase) {
-                if (phase != AppPhase.Player) KeyEventRouter.handler = null
-                onDispose { KeyEventRouter.handler = null }
-            }
-
-            when (phase) {
-                AppPhase.Setup -> SetupScreen(
-                    initialUrl = container.settings.server,
-                    connecting = connecting,
-                    error = setupError,
-                    onConnect = appViewModel::connect,
-                )
-                AppPhase.Player -> PlayerRoot(container, onToast)
-            }
+        DisposableEffect(phase) {
+            if (phase != AppPhase.Player) KeyEventRouter.handler = null
+            onDispose { KeyEventRouter.handler = null }
         }
+
+        when (phase) {
+            AppPhase.Setup -> SetupScreen(
+                initialUrl = container.settings.server,
+                connecting = connecting,
+                error = setupError,
+                onConnect = appViewModel::connect,
+            )
+            AppPhase.Player -> PlayerRoot(container)
+        }
+
+        KaraokeToast(
+            message = toastMessage,
+            onDismiss = container.uiMessenger::dismiss,
+        )
     }
 }
 
 @Composable
-private fun PlayerRoot(container: AppContainer, onToast: (String) -> Unit) {
+private fun PlayerRoot(container: AppContainer) {
     val context = LocalContext.current
     val playerViewModel: PlayerViewModel = viewModel(
         factory = remember(container) {
@@ -77,6 +67,7 @@ private fun PlayerRoot(container: AppContainer, onToast: (String) -> Unit) {
                     container.repository,
                     container.settings,
                     container.playbackEngine,
+                    container.uiMessenger,
                 )
             }
         },
@@ -87,13 +78,6 @@ private fun PlayerRoot(container: AppContainer, onToast: (String) -> Unit) {
     DisposableEffect(playerViewModel) {
         KeyEventRouter.handler = playerViewModel::handleKey
         onDispose { KeyEventRouter.handler = null }
-    }
-
-    LaunchedEffect(playerState.toastMessage) {
-        playerState.toastMessage?.let {
-            onToast(it)
-            playerViewModel.dismissToast()
-        }
     }
 
     PlayerScreen(
@@ -111,7 +95,7 @@ private fun PlayerRoot(container: AppContainer, onToast: (String) -> Unit) {
     )
 }
 
-private fun createPlayerView(context: Context, container: AppContainer): PlayerView =
+private fun createPlayerView(context: android.content.Context, container: AppContainer): PlayerView =
     PlayerView(context).apply {
         player = container.playbackEngine.videoPlayer
         useController = false
