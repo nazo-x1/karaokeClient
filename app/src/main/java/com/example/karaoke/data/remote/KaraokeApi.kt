@@ -2,8 +2,9 @@ package com.example.karaoke.data.remote
 
 import com.example.karaoke.data.remote.dto.ApiEnvelope
 import com.example.karaoke.data.remote.dto.ApiResult
+import com.example.karaoke.data.remote.dto.EnqueueResponse
+import com.example.karaoke.data.remote.dto.EnqueueResult
 import com.example.karaoke.data.remote.dto.PlaybackData
-import com.example.karaoke.data.remote.dto.PrepareStatus
 import com.example.karaoke.data.remote.dto.QueueItem
 import com.example.karaoke.data.remote.dto.SongItem
 import com.google.gson.Gson
@@ -80,7 +81,30 @@ class KaraokeApi(
         }
     }
 
-    fun enqueue(songId: Int): Result<Unit> = postEmpty("/queue/songs/$songId")
+    fun enqueue(songId: Int): Result<EnqueueResponse> {
+        val request = Request.Builder()
+            .url(apiV1("/queue/songs/$songId"))
+            .post(byteArrayOf().toRequestBody(null))
+            .build()
+        return execute(request) { body ->
+            val res = parse<EnqueueResult>(body) ?: return@execute null
+            val prepare = res.data?.prepare
+            when {
+                res.code == 0 -> EnqueueResponse(
+                    success = true,
+                    message = res.msg ?: "已点歌",
+                    prepare = prepare,
+                )
+                prepare != null && !prepare.ready -> EnqueueResponse(
+                    success = false,
+                    message = res.msg ?: "播放资源准备中，请稍候…",
+                    prepare = prepare.copy(song_id = prepare.song_id ?: songId),
+                    needsPrepare = true,
+                )
+                else -> throw Exception(res.msg ?: "点歌失败")
+            }
+        }
+    }
 
     fun setTop(songId: Int): Result<Unit> = postEmpty("/queue/songs/$songId/top")
 

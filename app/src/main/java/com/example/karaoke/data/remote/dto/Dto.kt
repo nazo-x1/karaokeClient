@@ -35,11 +35,25 @@ data class SongItem(
 )
 
 data class PrepareStatus(
+    val song_id: Int? = null,
     val ready: Boolean = false,
     val status: String? = null,
     val message: String? = null,
     val progress: Double? = null,
     val error: String? = null,
+    val phase: String? = null,
+)
+
+data class EnqueueResult(
+    val playback_mode: String? = null,
+    val prepare: PrepareStatus? = null,
+)
+
+data class EnqueueResponse(
+    val success: Boolean,
+    val message: String,
+    val prepare: PrepareStatus? = null,
+    val needsPrepare: Boolean = false,
 )
 
 data class PlaybackData(

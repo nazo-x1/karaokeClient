@@ -6,6 +6,7 @@ import com.example.karaoke.data.KaraokeRepository
 import com.example.karaoke.data.ServerUrlNormalizer
 import com.example.karaoke.data.prefs.SettingsStore
 import com.example.karaoke.data.remote.dto.QueueItem
+import com.example.karaoke.data.remote.dto.PrepareStatus
 import com.example.karaoke.data.remote.dto.SongItem
 import com.example.karaoke.playback.PlaybackEngine
 import com.example.karaoke.playback.PlaybackState
@@ -14,9 +15,11 @@ import com.example.karaoke.ui.UiMessenger
 import com.example.karaoke.ui.navigation.DrawerFocusZone
 import com.example.karaoke.ui.navigation.DrawerTab
 import com.example.karaoke.ui.navigation.LibraryFocus
+import com.example.karaoke.ui.navigation.RandomFocus
 import com.example.karaoke.ui.navigation.QueueAction
 import com.example.karaoke.ui.navigation.QueueInteractionMode
 import com.example.karaoke.ui.navigation.SettingsFocus
+import com.example.karaoke.ui.components.isPrepareActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +45,12 @@ data class PlayerUiState(
     val libraryLoading: Boolean = false,
     val libraryHasMore: Boolean = true,
     val libraryFocusIndex: Int = 0,
+    // Random tab
+    val randomSongs: List<SongItem> = emptyList(),
+    val randomLoading: Boolean = false,
+    val randomFocusIndex: Int = 0,
+    // Prepare tracking (点歌后资源准备)
+    val prepareTracks: List<PrepareTrack> = emptyList(),
     // Queue tab
     val queueFocusIndex: Int = 0,
     val queueMode: QueueInteractionMode = QueueInteractionMode.Browse,
@@ -51,6 +60,12 @@ data class PlayerUiState(
     val settingsTesting: Boolean = false,
     val settingsError: String? = null,
     val settingsFocusIndex: Int = 0,
+)
+
+data class PrepareTrack(
+    val songId: Int,
+    val displayName: String,
+    val status: PrepareStatus,
 )
 
 class PlayerViewModel(
@@ -65,6 +80,14 @@ class PlayerViewModel(
 
     private var sseJob: Job? = null
     private var overlayJob: Job? = null
+    private var preparePollJob: Job? = null
+    private var libraryPool: List<SongItem> = emptyList()
+    private var randomSeed: Int = 0
+
+    companion object {
+        private const val RANDOM_PICK_COUNT = 12
+        private const val LIBRARY_POOL_MAX_PAGES = 5
+    }
 
     init {
         playbackEngine.onPlaybackEnded = {
@@ -102,6 +125,7 @@ class PlayerViewModel(
             }
         }
         startSession()
+        startPreparePolling()
     }
 
     fun startSession() {
@@ -137,6 +161,7 @@ class PlayerViewModel(
                 drawerTab = if (newOpen && !state.drawerOpen) DrawerTab.Library else state.drawerTab,
                 drawerFocusZone = DrawerFocusZone.Content,
                 libraryFocusIndex = 0,
+                randomFocusIndex = 0,
                 settingsFocusIndex = 0,
                 queueFocusIndex = 0,
                 queueMode = QueueInteractionMode.Browse,
@@ -151,12 +176,16 @@ class PlayerViewModel(
                 queueMode = QueueInteractionMode.Browse,
                 drawerFocusZone = DrawerFocusZone.Content,
                 libraryFocusIndex = 0,
+                randomFocusIndex = 0,
                 settingsFocusIndex = 0,
                 queueFocusIndex = 0,
             )
         }
         if (tab == DrawerTab.Library && _uiState.value.librarySongs.isEmpty()) {
             loadLibrary(reset = true)
+        }
+        if (tab == DrawerTab.Random) {
+            loadRandomTab()
         }
     }
 
@@ -306,6 +335,13 @@ class PlayerViewModel(
                         _uiState.update { it.copy(libraryFocusIndex = state.libraryFocusIndex - 1) }
                     }
                 }
+                DrawerTab.Random -> {
+                    if (state.randomFocusIndex <= 0) {
+                        _uiState.update { it.copy(drawerFocusZone = DrawerFocusZone.Tabs) }
+                    } else {
+                        _uiState.update { it.copy(randomFocusIndex = state.randomFocusIndex - 1) }
+                    }
+                }
                 DrawerTab.Queue -> {
                     if (state.queue.isEmpty()) {
                         _uiState.update { it.copy(drawerFocusZone = DrawerFocusZone.Tabs) }
@@ -334,6 +370,12 @@ class PlayerViewModel(
                     val max = libraryMaxIndex(state)
                     if (state.libraryFocusIndex < max) {
                         _uiState.update { it.copy(libraryFocusIndex = state.libraryFocusIndex + 1) }
+                    }
+                }
+                DrawerTab.Random -> {
+                    val max = randomMaxIndex(state)
+                    if (state.randomFocusIndex < max) {
+                        _uiState.update { it.copy(randomFocusIndex = state.randomFocusIndex + 1) }
                     }
                 }
                 DrawerTab.Queue -> {
@@ -366,8 +408,15 @@ class PlayerViewModel(
                             loadLibrary(reset = false)
                         } else {
                             val songIndex = state.libraryFocusIndex - 1
-                            state.librarySongs.getOrNull(songIndex)?.let { enqueueSong(it.id) }
+                            state.librarySongs.getOrNull(songIndex)?.let { enqueueSong(it.id, it.display_name) }
                         }
+                    }
+                }
+                DrawerTab.Random -> when (state.randomFocusIndex) {
+                    RandomFocus.REFRESH -> refreshRandom()
+                    else -> {
+                        val songIndex = state.randomFocusIndex - 1
+                        state.randomSongs.getOrNull(songIndex)?.let { enqueueSong(it.id, it.display_name) }
                     }
                 }
                 DrawerTab.Queue -> {
@@ -397,6 +446,11 @@ class PlayerViewModel(
         return (count - 1).coerceAtLeast(0)
     }
 
+    private fun randomMaxIndex(state: PlayerUiState): Int {
+        val count = RandomFocus.itemCount(state.randomSongs.size)
+        return (count - 1).coerceAtLeast(0)
+    }
+
     private fun cycleTab(forward: Boolean) {
         _uiState.update { state ->
             val tabs = DrawerTab.entries
@@ -407,12 +461,55 @@ class PlayerViewModel(
                 queueMode = QueueInteractionMode.Browse,
                 drawerFocusZone = DrawerFocusZone.Content,
                 libraryFocusIndex = 0,
+                randomFocusIndex = 0,
                 settingsFocusIndex = 0,
                 queueFocusIndex = 0,
             )
         }
         if (_uiState.value.drawerTab == DrawerTab.Library && _uiState.value.librarySongs.isEmpty()) {
             loadLibrary(reset = true)
+        }
+        if (_uiState.value.drawerTab == DrawerTab.Random) {
+            loadRandomTab()
+        }
+    }
+
+    fun refreshRandom() {
+        randomSeed += 1
+        recomputeRandomSongs()
+    }
+
+    fun loadRandomTab() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(randomLoading = true) }
+            ensureLibraryPool()
+            recomputeRandomSongs()
+            _uiState.update { it.copy(randomLoading = false) }
+        }
+    }
+
+    private suspend fun ensureLibraryPool() {
+        if (libraryPool.isNotEmpty()) return
+        val merged = mutableListOf<SongItem>()
+        var page = 1
+        repeat(LIBRARY_POOL_MAX_PAGES) {
+            val songs = repository.loadLibrary(page, "").getOrElse { emptyList() }
+            if (songs.isEmpty()) return@repeat
+            merged.addAll(songs)
+            page += 1
+        }
+        libraryPool = merged
+    }
+
+    private fun recomputeRandomSongs() {
+        val pool = libraryPool.filter { it.can_queue }.shuffled(java.util.Random(randomSeed.toLong()))
+        _uiState.update {
+            it.copy(
+                randomSongs = pool.take(RANDOM_PICK_COUNT),
+                randomFocusIndex = it.randomFocusIndex.coerceAtMost(
+                    (RandomFocus.itemCount(pool.take(RANDOM_PICK_COUNT).size) - 1).coerceAtLeast(0),
+                ),
+            )
         }
     }
 
@@ -518,12 +615,84 @@ class PlayerViewModel(
         }
     }
 
-    fun enqueueSong(songId: Int) {
+    fun enqueueSong(songId: Int, displayName: String = "") {
         viewModelScope.launch {
             repository.enqueue(songId).fold(
-                onSuccess = { uiMessenger.show("已点歌") },
+                onSuccess = { response ->
+                    handleEnqueueResponse(songId, displayName, response)
+                },
                 onFailure = { uiMessenger.show(it.message ?: "点歌失败") },
             )
+        }
+    }
+
+    private fun handleEnqueueResponse(
+        songId: Int,
+        displayName: String,
+        response: com.example.karaoke.data.remote.dto.EnqueueResponse,
+    ) {
+        val name = displayName.ifBlank { songNameOrDefault(songId) }
+        val prepare = response.prepare
+        if (response.needsPrepare && prepare != null) {
+            trackPrepare(songId, name, prepare)
+            uiMessenger.show(response.message.ifBlank { "已加入准备队列，完成后可点歌" })
+            return
+        }
+        if (prepare != null && isPrepareActive(prepare)) {
+            trackPrepare(songId, name, prepare)
+        }
+        uiMessenger.show(response.message)
+        if (response.success) {
+            viewModelScope.launch { refreshQueue() }
+        }
+    }
+
+    private fun songNameOrDefault(songId: Int): String {
+        val state = _uiState.value
+        return state.librarySongs.find { it.id == songId }?.display_name
+            ?: state.randomSongs.find { it.id == songId }?.display_name
+            ?: "歌曲 #$songId"
+    }
+
+    private fun trackPrepare(songId: Int, displayName: String, initial: PrepareStatus) {
+        _uiState.update { state ->
+            val tracks = state.prepareTracks
+                .filterNot { it.songId == songId }
+                .plus(PrepareTrack(songId, displayName, initial))
+            state.copy(prepareTracks = tracks)
+        }
+    }
+
+    private fun refreshPrepareTrack(songId: Int) {
+        viewModelScope.launch {
+            repository.fetchPrepareStatus(songId).onSuccess { status ->
+                if (status == null) return@onSuccess
+                _uiState.update { state ->
+                    val existing = state.prepareTracks.find { it.songId == songId } ?: return@update state
+                    val updated = existing.copy(status = status)
+                    val tracks = if (status.ready || status.status in setOf("failed", "not_needed")) {
+                        state.prepareTracks.filterNot { it.songId == songId }
+                    } else {
+                        state.prepareTracks.map { if (it.songId == songId) updated else it }
+                    }
+                    state.copy(prepareTracks = tracks)
+                }
+                if (status.ready) {
+                    uiMessenger.show("播放资源已就绪，可再次点歌")
+                }
+            }
+        }
+    }
+
+    private fun startPreparePolling() {
+        preparePollJob?.cancel()
+        preparePollJob = viewModelScope.launch {
+            while (true) {
+                delay(1500)
+                val active = _uiState.value.prepareTracks.filter { isPrepareActive(it.status) }
+                if (active.isEmpty()) continue
+                active.forEach { track -> refreshPrepareTrack(track.songId) }
+            }
         }
     }
 
@@ -657,6 +826,7 @@ class PlayerViewModel(
             9 -> {
                 val readyId = data.toIntOrNull() ?: return
                 playbackEngine.signalPrepareReady(readyId)
+                refreshPrepareTrack(readyId)
                 viewModelScope.launch {
                     val queue = repository.refreshQueue().getOrDefault(repository.queue.value)
                     if (queue.isNotEmpty() && queue.first().id == readyId) {

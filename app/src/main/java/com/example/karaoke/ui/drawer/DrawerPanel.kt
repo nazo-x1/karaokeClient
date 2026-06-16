@@ -9,13 +9,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.karaoke.ui.components.LaunchedEffectFocusScroll
+import com.example.karaoke.ui.components.PrepareProgressBanner
+import com.example.karaoke.ui.navigation.RandomFocus
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -51,7 +55,8 @@ fun DrawerPanel(
     onDismiss: () -> Unit,
     onQueryChange: (String) -> Unit,
     onLoadMore: () -> Unit,
-    onEnqueue: (Int) -> Unit,
+    onEnqueue: (Int, String) -> Unit,
+    onRefreshRandom: () -> Unit,
     onSettingsUrlChange: (String) -> Unit,
     onTestConnection: () -> Unit,
     onSaveReconnect: () -> Unit,
@@ -82,7 +87,13 @@ fun DrawerPanel(
                     focusZone = state.drawerFocusZone,
                     onTabSelected = onTabSelected,
                 )
-                Box(modifier = Modifier.weight(1f).padding(KaraokeDimens.SpaceMd)) {
+                if (state.prepareTracks.isNotEmpty()) {
+                    PrepareProgressBanner(
+                        tracks = state.prepareTracks,
+                        modifier = Modifier.padding(horizontal = KaraokeDimens.SpaceMd, vertical = KaraokeDimens.SpaceXs),
+                    )
+                }
+                Box(modifier = Modifier.weight(1f).padding(horizontal = KaraokeDimens.SpaceMd)) {
                     when (state.drawerTab) {
                         DrawerTab.Library -> LibraryTabContent(
                             query = state.libraryQuery,
@@ -93,6 +104,14 @@ fun DrawerPanel(
                             contentFocused = state.drawerFocusZone == DrawerFocusZone.Content,
                             onQueryChange = onQueryChange,
                             onLoadMore = onLoadMore,
+                            onEnqueue = onEnqueue,
+                        )
+                        DrawerTab.Random -> RandomTabContent(
+                            songs = state.randomSongs,
+                            loading = state.randomLoading,
+                            focusIndex = state.randomFocusIndex,
+                            contentFocused = state.drawerFocusZone == DrawerFocusZone.Content,
+                            onRefresh = onRefreshRandom,
                             onEnqueue = onEnqueue,
                         )
                         DrawerTab.Queue -> QueueTabContent(
@@ -159,7 +178,7 @@ private fun DrawerTabs(
                         shape,
                     )
                     .clickable { onTabSelected(tab) }
-                    .padding(horizontal = KaraokeDimens.SpaceMd, vertical = KaraokeDimens.SpaceSm),
+                    .padding(horizontal = KaraokeDimens.SpaceSm, vertical = KaraokeDimens.SpaceXs),
                 contentAlignment = Alignment.Center,
             ) {
                 KaraokeText(
@@ -176,6 +195,7 @@ private fun DrawerTabs(
 private val DrawerTab.label: String
     get() = when (this) {
         DrawerTab.Library -> "点歌"
+        DrawerTab.Random -> "推荐"
         DrawerTab.Queue -> "已点"
         DrawerTab.Settings -> "设置"
     }
@@ -190,20 +210,36 @@ private fun LibraryTabContent(
     contentFocused: Boolean,
     onQueryChange: (String) -> Unit,
     onLoadMore: () -> Unit,
-    onEnqueue: (Int) -> Unit,
+    onEnqueue: (Int, String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceSm)) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceSm),
+    ) {
         KaraokeTextField(
             value = query,
             onValueChange = onQueryChange,
             placeholder = "搜索歌曲",
             selected = contentFocused && focusIndex == LibraryFocus.SEARCH,
         )
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs)) {
-            itemsIndexed(songs) { index, song ->
+        val listState = rememberLazyListState()
+        LaunchedEffectFocusScroll(
+            focusIndex = focusIndex,
+            contentFocused = contentFocused,
+            listState = listState,
+            lazyIndexForFocus = { idx ->
+                LibraryFocus.lazyListIndex(idx, songs.size, hasMore && !loading)
+            },
+        )
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs),
+        ) {
+            itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
                 KaraokeFocusableRow(
                     selected = contentFocused && focusIndex == LibraryFocus.songRow(index),
-                    onClick = { onEnqueue(song.id) },
+                    onClick = { onEnqueue(song.id, song.display_name) },
                 ) {
                     KaraokeText(
                         text = song.display_name,
@@ -262,6 +298,65 @@ private fun LibraryTabContent(
 }
 
 @Composable
+private fun RandomTabContent(
+    songs: List<SongItem>,
+    loading: Boolean,
+    focusIndex: Int,
+    contentFocused: Boolean,
+    onRefresh: () -> Unit,
+    onEnqueue: (Int, String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceSm),
+    ) {
+        KaraokeButton(
+            text = if (loading) "加载中…" else "换一批推荐",
+            onClick = onRefresh,
+            enabled = !loading,
+            selected = contentFocused && focusIndex == RandomFocus.REFRESH,
+            variant = KaraokeButtonVariant.Secondary,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        val listState = rememberLazyListState()
+        LaunchedEffectFocusScroll(
+            focusIndex = focusIndex,
+            contentFocused = contentFocused,
+            listState = listState,
+            lazyIndexForFocus = { idx -> RandomFocus.lazyListIndex(idx, songs.size) },
+        )
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs),
+        ) {
+            itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
+                KaraokeFocusableRow(
+                    selected = contentFocused && focusIndex == RandomFocus.songRow(index),
+                    onClick = { onEnqueue(song.id, song.display_name) },
+                ) {
+                    KaraokeText(
+                        text = song.display_name,
+                        style = KaraokeTextStyle.List,
+                        modifier = Modifier.weight(1f),
+                    )
+                    KaraokeText(text = "+ 点歌", style = KaraokeTextStyle.Body, color = KaraokeColors.AccentPrimary)
+                }
+            }
+            if (!loading && songs.isEmpty()) {
+                item {
+                    KaraokeText(
+                        text = "暂无可推荐歌曲",
+                        style = KaraokeTextStyle.Hint,
+                        modifier = Modifier.padding(KaraokeDimens.SpaceSm),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun QueueTabContent(
     queue: List<QueueItem>,
     focusIndex: Int,
@@ -277,8 +372,19 @@ private fun QueueTabContent(
         }
         return
     }
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs)) {
-        itemsIndexed(queue) { index, item ->
+    val listState = rememberLazyListState()
+    LaunchedEffectFocusScroll(
+        focusIndex = focusIndex,
+        contentFocused = contentFocused,
+        listState = listState,
+        lazyIndexForFocus = { it },
+    )
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs),
+    ) {
+        itemsIndexed(queue, key = { _, item -> item.id }) { index, item ->
             val focused = contentFocused && index == focusIndex
             val borderWidth = if (focused) KaraokeDimens.FocusBorderStrong else KaraokeDimens.Border
             val borderColor = if (focused) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle
@@ -382,6 +488,10 @@ private fun DrawerHintBar(state: PlayerUiState) {
         DrawerTab.Library -> when (state.drawerFocusZone) {
             DrawerFocusZone.Tabs -> "◀▶ 切换 Tab · ▼ 进入列表"
             DrawerFocusZone.Content -> "▲▼ 移动 · ◀▶ 切换 Tab · OK 点歌"
+        }
+        DrawerTab.Random -> when (state.drawerFocusZone) {
+            DrawerFocusZone.Tabs -> "◀▶ 切换 Tab · ▼ 进入列表"
+            DrawerFocusZone.Content -> "▲▼ 移动 · ◀▶ 切换 Tab · OK 点歌/刷新"
         }
         DrawerTab.Queue -> when (state.queueMode) {
             QueueInteractionMode.Browse -> when (state.drawerFocusZone) {

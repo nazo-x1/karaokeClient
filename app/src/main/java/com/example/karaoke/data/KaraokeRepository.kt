@@ -3,7 +3,7 @@ package com.example.karaoke.data
 import com.example.karaoke.data.prefs.SettingsStore
 import com.example.karaoke.data.remote.KaraokeApi
 import com.example.karaoke.data.remote.SseClient
-import com.example.karaoke.data.remote.dto.PlaybackData
+import com.example.karaoke.data.remote.dto.EnqueueResponse
 import com.example.karaoke.data.remote.dto.PrepareStatus
 import com.example.karaoke.data.remote.dto.QueueItem
 import com.example.karaoke.data.remote.dto.SongItem
@@ -56,7 +56,7 @@ class KaraokeRepository(
     suspend fun loadLibrary(page: Int, q: String): Result<List<SongItem>> =
         withContext(Dispatchers.IO) { api.fetchLibrary(page, q) }
 
-    suspend fun enqueue(songId: Int): Result<Unit> =
+    suspend fun enqueue(songId: Int): Result<EnqueueResponse> =
         withContext(Dispatchers.IO) { api.enqueue(songId) }
 
     suspend fun setTop(songId: Int): Result<Unit> =
