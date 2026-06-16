@@ -5,6 +5,7 @@ import com.example.karaoke.data.remote.dto.ApiResult
 import com.example.karaoke.data.remote.dto.EnqueueResponse
 import com.example.karaoke.data.remote.dto.EnqueueResult
 import com.example.karaoke.data.remote.dto.PlaybackData
+import com.example.karaoke.data.remote.dto.PrepareStatus
 import com.example.karaoke.data.remote.dto.QueueItem
 import com.example.karaoke.data.remote.dto.SongItem
 import com.google.gson.Gson
