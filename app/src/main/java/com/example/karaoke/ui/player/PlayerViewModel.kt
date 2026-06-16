@@ -248,49 +248,51 @@ class PlayerViewModel(
         }
     }
 
-    private fun handleQueueActionKey(keyCode: Int, state: PlayerUiState): Boolean = when (keyCode) {
-        android.view.KeyEvent.KEYCODE_BACK,
-        android.view.KeyEvent.KEYCODE_DPAD_LEFT,
-        -> {
-            cancelQueueAction()
-            true
-        }
-        android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-            _uiState.update {
-                it.copy(
-                    queueAction = if (it.queueAction == QueueAction.Top) {
-                        QueueAction.Remove
-                    } else {
-                        QueueAction.Top
-                    },
-                )
+    private fun handleQueueActionKey(keyCode: Int, state: PlayerUiState): Boolean {
+        return when (keyCode) {
+            android.view.KeyEvent.KEYCODE_BACK,
+            android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+            -> {
+                cancelQueueAction()
+                true
             }
-            true
-        }
-        android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-            _uiState.update {
-                it.copy(queueFocusIndex = (it.queueFocusIndex - 1).coerceAtLeast(0))
+            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                _uiState.update {
+                    it.copy(
+                        queueAction = if (it.queueAction == QueueAction.Top) {
+                            QueueAction.Remove
+                        } else {
+                            QueueAction.Top
+                        },
+                    )
+                }
+                true
             }
-            true
-        }
-        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-            _uiState.update {
-                it.copy(
-                    queueFocusIndex = (it.queueFocusIndex + 1)
-                        .coerceAtMost(it.queue.size - 1),
-                )
+            android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                _uiState.update {
+                    it.copy(queueFocusIndex = (it.queueFocusIndex - 1).coerceAtLeast(0))
+                }
+                true
             }
-            true
+            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                _uiState.update {
+                    it.copy(
+                        queueFocusIndex = (it.queueFocusIndex + 1)
+                            .coerceAtMost(it.queue.size - 1),
+                    )
+                }
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+            android.view.KeyEvent.KEYCODE_ENTER,
+            -> {
+                val item = state.queue.getOrNull(state.queueFocusIndex) ?: return false
+                if (item.isPlaying()) return true
+                executeQueueAction(state.queueAction, item.id)
+                true
+            }
+            else -> false
         }
-        android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-        android.view.KeyEvent.KEYCODE_ENTER,
-        -> {
-            val item = state.queue.getOrNull(state.queueFocusIndex) ?: return false
-            if (item.isPlaying()) return true
-            executeQueueAction(state.queueAction, item.id)
-            true
-        }
-        else -> false
     }
 
     private fun moveDrawerFocusUp(state: PlayerUiState) {
