@@ -72,6 +72,11 @@ fun PlayerScreen(
                 playerView.setShutterBackgroundColor(android.graphics.Color.BLACK)
                 playerView
             },
+            update = { view ->
+                if (view.player == null && playerView.player != null) {
+                    view.player = playerView.player
+                }
+            },
             modifier = Modifier.fillMaxSize(),
         )
 

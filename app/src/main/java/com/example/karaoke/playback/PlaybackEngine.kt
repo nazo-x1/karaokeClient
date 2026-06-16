@@ -54,6 +54,7 @@ class PlaybackEngine(
     private var isAccReady = false
     private var playersReleased = false
     private var isLoadingMedia = false
+    private var startedPlayingNotifiedForSongId = -1
     var pendingAutoPlay = false
         private set
     var prepareWaitSongId = -1
@@ -71,38 +72,47 @@ class PlaybackEngine(
                 mainHandler.postDelayed(this, 250)
                 return
             }
-            if (playbackMode == MODE_ENHANCED &&
-                ::videoPlayer.isInitialized &&
-                ::vocalsPlayer.isInitialized &&
-                ::accPlayer.isInitialized &&
-                videoPlayer.isPlaying && vocalsPlayer.isPlaying
-            ) {
-                val diff = videoPlayer.currentPosition - vocalsPlayer.currentPosition
-                when {
-                    diff > 80 -> {
-                        vocalsPlayer.setPlaybackSpeed(1.03f)
-                        accPlayer.setPlaybackSpeed(1.03f)
-                    }
-                    diff < -80 -> {
-                        vocalsPlayer.setPlaybackSpeed(0.97f)
-                        accPlayer.setPlaybackSpeed(0.97f)
-                    }
-                    else -> {
-                        if (abs(diff) < 30) {
-                            vocalsPlayer.setPlaybackSpeed(1.0f)
-                            accPlayer.setPlaybackSpeed(1.0f)
+            try {
+                if (playbackMode == MODE_ENHANCED &&
+                    ::videoPlayer.isInitialized &&
+                    ::vocalsPlayer.isInitialized &&
+                    ::accPlayer.isInitialized &&
+                    videoPlayer.isPlaying && vocalsPlayer.isPlaying
+                ) {
+                    val diff = videoPlayer.currentPosition - vocalsPlayer.currentPosition
+                    when {
+                        diff > 80 -> {
+                            vocalsPlayer.setPlaybackSpeed(1.03f)
+                            accPlayer.setPlaybackSpeed(1.03f)
+                        }
+                        diff < -80 -> {
+                            vocalsPlayer.setPlaybackSpeed(0.97f)
+                            accPlayer.setPlaybackSpeed(0.97f)
+                        }
+                        else -> {
+                            if (abs(diff) < 30) {
+                                vocalsPlayer.setPlaybackSpeed(1.0f)
+                                accPlayer.setPlaybackSpeed(1.0f)
+                            }
                         }
                     }
+                    if (abs(diff) > 1000) {
+                        val pos = videoPlayer.currentPosition
+                        vocalsPlayer.seekTo(pos)
+                        accPlayer.seekTo(pos)
+                    }
                 }
-                if (abs(diff) > 1000) {
-                    val pos = videoPlayer.currentPosition
-                    vocalsPlayer.seekTo(pos)
-                    accPlayer.seekTo(pos)
-                }
+            } catch (e: Exception) {
+                Log.e("KTV", "音画同步失败", e)
             }
             mainHandler.postDelayed(this, 250)
         }
     }
+
+    private val mediaAudioAttributes = AudioAttributes.Builder()
+        .setUsage(C.USAGE_MEDIA)
+        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+        .build()
 
     private val _state = MutableStateFlow<PlaybackState>(PlaybackState.Idle)
     val state: StateFlow<PlaybackState> = _state.asStateFlow()
@@ -226,11 +236,13 @@ class PlaybackEngine(
 
         playbackMode = if (activeProfile.mode == MODE_ENHANCED) MODE_ENHANCED else MODE_PLAIN
         currentSongId = song.id
+        startedPlayingNotifiedForSongId = -1
         val videoUrl = repository.streamUrl(song.id, "video")
 
         withContext(Dispatchers.Main) {
             isLoadingMedia = true
             try {
+                applyAudioFocusMode()
                 pendingAutoPlay = autoPlay
                 resetReadyFlags()
                 videoPlayer.pause()
@@ -288,7 +300,9 @@ class PlaybackEngine(
                 return false
             }
             _prepareProgress.value = PrepareProgress(songId, displayName, status)
-            _state.value = PlaybackState.Preparing(songId, displayName, status)
+            withContext(Dispatchers.Main) {
+                _state.value = PlaybackState.Preparing(songId, displayName, status)
+            }
             delay(1500)
         }
         prepareWaitSongId = -1
@@ -338,21 +352,26 @@ class PlaybackEngine(
     }
 
     private fun startPlayback() {
-        if (!::videoPlayer.isInitialized) return
+        if (playersReleased || !::videoPlayer.isInitialized) return
         val audioReady = playbackMode == MODE_PLAIN || (isVocalsReady && isAccReady)
         if (!isVideoReady || !audioReady) {
             pendingAutoPlay = true
             return
         }
         pendingAutoPlay = false
-        val pos = videoPlayer.currentPosition
-        if (playbackMode == MODE_ENHANCED) {
-            vocalsPlayer.seekTo(pos)
-            accPlayer.seekTo(pos)
-            vocalsPlayer.playWhenReady = true
-            accPlayer.playWhenReady = true
+        try {
+            val pos = videoPlayer.currentPosition
+            if (playbackMode == MODE_ENHANCED) {
+                vocalsPlayer.seekTo(pos)
+                accPlayer.seekTo(pos)
+                vocalsPlayer.playWhenReady = true
+                accPlayer.playWhenReady = true
+            }
+            videoPlayer.playWhenReady = true
+        } catch (e: Exception) {
+            Log.e("KTV", "startPlayback failed", e)
+            onToast("播放启动失败: ${e.message}")
         }
-        videoPlayer.playWhenReady = true
     }
 
     private fun pausePlayback() {
@@ -381,12 +400,23 @@ class PlaybackEngine(
         }
     }
 
-    private fun initPlayers() {
-        val mediaAudio = AudioAttributes.Builder()
-            .setUsage(C.USAGE_MEDIA)
-            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-            .build()
+    private fun applyAudioFocusMode() {
+        if (!::videoPlayer.isInitialized) return
+        when (playbackMode) {
+            MODE_PLAIN -> {
+                videoPlayer.setAudioAttributes(mediaAudioAttributes, true)
+                vocalsPlayer.setAudioAttributes(mediaAudioAttributes, false)
+                accPlayer.setAudioAttributes(mediaAudioAttributes, false)
+            }
+            MODE_ENHANCED -> {
+                videoPlayer.setAudioAttributes(mediaAudioAttributes, false)
+                vocalsPlayer.setAudioAttributes(mediaAudioAttributes, true)
+                accPlayer.setAudioAttributes(mediaAudioAttributes, false)
+            }
+        }
+    }
 
+    private fun initPlayers() {
         val tvLoadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(15000, 50000, 2500, 5000)
             .build()
@@ -400,16 +430,15 @@ class PlaybackEngine(
             .build()
             .apply {
                 volume = 0f
-                setAudioAttributes(mediaAudio, true)
-                setWakeMode(C.WAKE_MODE_NETWORK)
+                setAudioAttributes(mediaAudioAttributes, false)
             }
         vocalsPlayer = ExoPlayer.Builder(context, renderersFactory).build().apply {
             volume = vocalsVolume
-            setAudioAttributes(mediaAudio, true)
+            setAudioAttributes(mediaAudioAttributes, true)
         }
         accPlayer = ExoPlayer.Builder(context, renderersFactory).build().apply {
             volume = accVolume
-            setAudioAttributes(mediaAudio, true)
+            setAudioAttributes(mediaAudioAttributes, false)
         }
 
         val errorListener = object : Player.Listener {
@@ -450,12 +479,14 @@ class PlaybackEngine(
                         if (!vocalsPlayer.isPlaying) vocalsPlayer.playWhenReady = true
                         if (!accPlayer.isPlaying) accPlayer.playWhenReady = true
                     }
-                    onStartedPlaying?.let { callback ->
-                        val songId = currentSongId
-                        try {
-                            callback(songId)
-                        } catch (e: Exception) {
-                            Log.e("KTV", "onStartedPlaying failed", e)
+                    if (currentSongId > 0 && currentSongId != startedPlayingNotifiedForSongId) {
+                        startedPlayingNotifiedForSongId = currentSongId
+                        onStartedPlaying?.let { callback ->
+                            try {
+                                callback(currentSongId)
+                            } catch (e: Exception) {
+                                Log.e("KTV", "onStartedPlaying failed", e)
+                            }
                         }
                     }
                     _state.value = PlaybackState.Playing(currentSongId, "")
