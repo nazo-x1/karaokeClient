@@ -639,7 +639,8 @@ class PlayerViewModel(
         if (prepare != null && isPrepareActive(prepare)) {
             trackPrepare(songId, name, prepare)
         }
-        uiMessenger.show(response.message)
+        val successMsg = response.message.ifBlank { "$name 点歌成功" }
+        uiMessenger.show(if (response.success) successMsg else response.message.ifBlank { "点歌失败" })
         if (response.success) {
             viewModelScope.launch { refreshQueue() }
         }

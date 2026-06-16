@@ -93,12 +93,12 @@ class KaraokeApi(
             when {
                 res.code == 0 -> EnqueueResponse(
                     success = true,
-                    message = res.msg ?: "已点歌",
+                    message = userMessage(res.msg, "已点歌"),
                     prepare = prepare,
                 )
                 prepare != null && !prepare.ready -> EnqueueResponse(
                     success = false,
-                    message = res.msg ?: "播放资源准备中，请稍候…",
+                    message = userMessage(res.msg, "播放资源准备中，请稍候…"),
                     prepare = prepare.copy(song_id = prepare.song_id ?: songId),
                     needsPrepare = true,
                 )
@@ -189,6 +189,11 @@ class KaraokeApi(
 
     private fun String.encode(): String =
         java.net.URLEncoder.encode(this, Charsets.UTF_8.name())
+
+    private fun userMessage(msg: String?, fallback: String): String {
+        val text = msg?.trim().orEmpty()
+        return text.takeIf { it.isNotEmpty() && !it.equals("Success!", ignoreCase = true) } ?: fallback
+    }
 
     private fun mapHttpError(code: Int, body: String): String = when (code) {
         404 -> "未找到 API（/api/v1），请确认后端版本与地址是否正确"
