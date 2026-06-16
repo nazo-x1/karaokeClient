@@ -17,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.unit.dp
 import com.example.karaoke.ui.theme.KaraokeColors
 import com.example.karaoke.ui.theme.KaraokeDimens
 
@@ -33,44 +32,18 @@ fun KaraokeFocusableRow(
             .fillMaxWidth()
             .background(
                 if (focused) KaraokeColors.BgHover else KaraokeColors.BgElevated,
-                RoundedCornerShape(8.dp),
+                RoundedCornerShape(KaraokeDimens.RadiusSm),
             )
             .border(
-                width = if (focused) KaraokeDimens.FocusBorder else 1.dp,
+                width = if (focused) KaraokeDimens.FocusBorder else KaraokeDimens.Border,
                 color = if (focused) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(KaraokeDimens.RadiusSm),
             )
             .onFocusChanged { focused = it.isFocused }
             .focusable()
             .clickable(onClick = onClick)
-            .padding(12.dp),
+            .padding(KaraokeDimens.SpaceSm),
         verticalAlignment = Alignment.CenterVertically,
         content = content,
-    )
-}
-
-@Composable
-fun KaraokeActionChip(
-    label: String,
-    selected: Boolean,
-    secondary: Boolean = false,
-) {
-    val bg = when {
-        selected -> KaraokeColors.AccentPrimary
-        secondary -> KaraokeColors.BgSecondary
-        else -> KaraokeColors.BgHover
-    }
-    val fg = when {
-        selected -> KaraokeColors.TextPrimary
-        secondary -> KaraokeColors.TextSecondary
-        else -> KaraokeColors.TextPrimary
-    }
-    KaraokeText(
-        text = label,
-        style = KaraokeTextStyle.Body,
-        color = fg,
-        modifier = Modifier
-            .background(bg, RoundedCornerShape(6.dp))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
     )
 }

@@ -295,16 +295,8 @@ class PlayerViewModel(
                 android.view.KeyEvent.KEYCODE_ENTER,
                 -> {
                     val item = state.queue.getOrNull(state.queueFocusIndex) ?: return false
-                    viewModelScope.launch {
-                        when (state.queueAction) {
-                            QueueAction.Top -> repository.setTop(item.id)
-                            QueueAction.Remove -> repository.remove(item.id)
-                        }
-                        refreshQueue()
-                        _uiState.update {
-                            it.copy(queueMode = QueueInteractionMode.Browse)
-                        }
-                    }
+                    if (item.isPlaying()) return true
+                    executeQueueAction(state.queueAction, item.id)
                     true
                 }
                 else -> false
@@ -318,6 +310,73 @@ class PlayerViewModel(
             val idx = tabs.indexOf(state.drawerTab)
             val next = if (forward) (idx + 1) % tabs.size else (idx - 1 + tabs.size) % tabs.size
             state.copy(drawerTab = tabs[next], queueMode = QueueInteractionMode.Browse)
+        }
+    }
+
+    fun cancelQueueAction() {
+        _uiState.update { it.copy(queueMode = QueueInteractionMode.Browse) }
+    }
+
+    /** 触摸：点击播放区域（播放/暂停或打开菜单）。 */
+    fun onPlayerTap() {
+        if (_uiState.value.drawerOpen) return
+        val state = _uiState.value
+        if (state.queue.isNotEmpty() || playbackEngine.isPlaying()) {
+            togglePlayPause()
+        } else {
+            toggleDrawer(true)
+        }
+    }
+
+    /** 触摸：点击已点列表行。 */
+    fun onQueueRowTapped(index: Int) {
+        val state = _uiState.value
+        val item = state.queue.getOrNull(index) ?: return
+        when (state.queueMode) {
+            QueueInteractionMode.Browse -> {
+                _uiState.update { it.copy(queueFocusIndex = index) }
+                if (item.isPlaying()) return
+                _uiState.update {
+                    it.copy(
+                        queueMode = QueueInteractionMode.Action,
+                        queueAction = QueueAction.Top,
+                    )
+                }
+            }
+            QueueInteractionMode.Action -> {
+                if (index == state.queueFocusIndex) {
+                    cancelQueueAction()
+                } else {
+                    _uiState.update { it.copy(queueFocusIndex = index) }
+                    if (!item.isPlaying()) {
+                        _uiState.update {
+                            it.copy(queueMode = QueueInteractionMode.Action, queueAction = QueueAction.Top)
+                        }
+                    } else {
+                        cancelQueueAction()
+                    }
+                }
+            }
+        }
+    }
+
+    /** 触摸：点击置顶/移除按钮。 */
+    fun onQueueActionTapped(action: QueueAction) {
+        val state = _uiState.value
+        if (state.queueMode != QueueInteractionMode.Action) return
+        val item = state.queue.getOrNull(state.queueFocusIndex) ?: return
+        if (item.isPlaying()) return
+        executeQueueAction(action, item.id)
+    }
+
+    private fun executeQueueAction(action: QueueAction, songId: Int) {
+        viewModelScope.launch {
+            when (action) {
+                QueueAction.Top -> repository.setTop(songId)
+                QueueAction.Remove -> repository.remove(songId)
+            }
+            refreshQueue()
+            _uiState.update { it.copy(queueMode = QueueInteractionMode.Browse) }
         }
     }
 

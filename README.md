@@ -34,7 +34,7 @@ com.example.karaoke/
 ├── playback/PlaybackEngine.kt
 └── ui/
     ├── components/        # 统一 TV 组件（Text/Button/Card/Toast…）
-    ├── theme/             # KaraokeTheme + Design Tokens
+    ├── theme/             # KaraokeTheme + DesignTokens + 1920×1080 自适应缩放
     ├── setup/ player/ drawer/
     └── UiMessenger.kt     # 应用内消息（替代 Toast）
 ```

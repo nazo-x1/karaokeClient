@@ -9,8 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.example.karaoke.ui.theme.DesignTokens
 import com.example.karaoke.ui.theme.KaraokeColors
+import com.example.karaoke.ui.theme.KaraokeDimens
+import com.example.karaoke.ui.theme.wdp
 import kotlinx.coroutines.delay
 
 @Composable
@@ -31,9 +33,9 @@ fun KaraokeToast(
     ) {
         Box(
             modifier = Modifier
-                .padding(bottom = 48.dp)
-                .background(KaraokeColors.BgElevated, RoundedCornerShape(8.dp))
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(bottom = wdp(DesignTokens.TOAST_BOTTOM))
+                .background(KaraokeColors.BgElevated, RoundedCornerShape(KaraokeDimens.RadiusSm))
+                .padding(horizontal = KaraokeDimens.SpaceLg, vertical = KaraokeDimens.SpaceSm),
         ) {
             KaraokeText(text = message, style = KaraokeTextStyle.Body)
         }

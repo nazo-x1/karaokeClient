@@ -94,6 +94,7 @@ private fun PlayerRoot(container: AppContainer) {
         state = playerState,
         playerView = exoPlayerView,
         onToggleDrawer = playerViewModel::toggleDrawer,
+        onPlayerTap = playerViewModel::onPlayerTap,
         onOpenSettings = playerViewModel::openSettingsFromError,
         onTabSelected = playerViewModel::setDrawerTab,
         onQueryChange = playerViewModel::updateLibraryQuery,
@@ -102,6 +103,8 @@ private fun PlayerRoot(container: AppContainer) {
         onSettingsUrlChange = playerViewModel::updateSettingsUrl,
         onTestConnection = playerViewModel::testConnection,
         onSaveReconnect = playerViewModel::saveAndReconnect,
+        onQueueRowTapped = playerViewModel::onQueueRowTapped,
+        onQueueActionTapped = playerViewModel::onQueueActionTapped,
     )
 }
 

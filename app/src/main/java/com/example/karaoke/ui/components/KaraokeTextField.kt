@@ -11,8 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.dp
 import com.example.karaoke.ui.theme.KaraokeColors
+import com.example.karaoke.ui.theme.KaraokeDimens
 import com.example.karaoke.ui.theme.KaraokeTypography
 
 @Composable
@@ -28,9 +28,9 @@ fun KaraokeTextField(
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .background(KaraokeColors.BgElevated, RoundedCornerShape(8.dp))
-            .border(1.dp, KaraokeColors.BorderSubtle, RoundedCornerShape(8.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .background(KaraokeColors.BgElevated, RoundedCornerShape(KaraokeDimens.RadiusSm))
+            .border(KaraokeDimens.Border, KaraokeColors.BorderSubtle, RoundedCornerShape(KaraokeDimens.RadiusSm))
+            .padding(horizontal = KaraokeDimens.SpaceMd, vertical = KaraokeDimens.SpaceSm),
         textStyle = TextStyle(
             color = KaraokeColors.TextPrimary,
             fontSize = KaraokeTypography.List,

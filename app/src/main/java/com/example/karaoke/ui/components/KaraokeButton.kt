@@ -1,13 +1,17 @@
 package com.example.karaoke.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import com.example.karaoke.ui.theme.KaraokeColors
+import com.example.karaoke.ui.theme.KaraokeDimens
 
 enum class KaraokeButtonVariant { Primary, Secondary }
 
@@ -44,6 +48,6 @@ fun KaraokeLoadingButton(
         text = if (loading) "请稍候…" else text,
         onClick = onClick,
         enabled = !loading,
-        modifier = modifier.height(48.dp),
+        modifier = modifier.height(KaraokeDimens.ButtonHeight),
     )
 }

@@ -13,7 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.karaoke.ui.components.KaraokeCard
 import com.example.karaoke.ui.components.KaraokeHintBar
 import com.example.karaoke.ui.components.KaraokeLoadingButton
@@ -37,26 +36,26 @@ fun SetupScreen(
             Column(
                 modifier = Modifier.width(KaraokeDimens.SetupCardWidth),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceMd),
             ) {
                 KaraokeCard {
                     KaraokeText(text = "连接 KTV 服务器", style = KaraokeTextStyle.Title)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
                     KaraokeText(
                         text = "请输入局域网服务器地址，例如 http://192.168.1.20:15233",
                         style = KaraokeTextStyle.Hint,
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(KaraokeDimens.SpaceMd))
                     KaraokeTextField(
                         value = url,
                         onValueChange = { url = it },
                         placeholder = "http://192.168.x.x:15233",
                     )
                     if (error != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
                         KaraokeText(text = error, style = KaraokeTextStyle.Error)
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(KaraokeDimens.SpaceMd))
                     KaraokeLoadingButton(
                         text = "连接",
                         loading = connecting,

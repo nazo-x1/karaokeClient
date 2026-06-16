@@ -4,6 +4,8 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,11 +14,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
@@ -30,7 +33,9 @@ import com.example.karaoke.ui.components.KaraokeScreen
 import com.example.karaoke.ui.components.KaraokeText
 import com.example.karaoke.ui.components.KaraokeTextStyle
 import com.example.karaoke.ui.drawer.DrawerPanel
+import com.example.karaoke.ui.navigation.QueueAction
 import com.example.karaoke.ui.theme.KaraokeColors
+import com.example.karaoke.ui.theme.KaraokeDimens
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -38,6 +43,7 @@ fun PlayerScreen(
     state: PlayerUiState,
     playerView: PlayerView,
     onToggleDrawer: (Boolean) -> Unit,
+    onPlayerTap: () -> Unit,
     onOpenSettings: () -> Unit,
     onTabSelected: (com.example.karaoke.ui.navigation.DrawerTab) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -46,7 +52,13 @@ fun PlayerScreen(
     onSettingsUrlChange: (String) -> Unit,
     onTestConnection: () -> Unit,
     onSaveReconnect: () -> Unit,
+    onQueueRowTapped: (Int) -> Unit,
+    onQueueActionTapped: (QueueAction) -> Unit,
 ) {
+    val touchEnabled = !state.drawerOpen &&
+        state.prepareProgress == null &&
+        !(state.connectionError && !state.drawerOpen)
+
     KaraokeScreen {
         AndroidView(
             factory = {
@@ -62,11 +74,24 @@ fun PlayerScreen(
             modifier = Modifier.fillMaxSize(),
         )
 
+        if (touchEnabled) {
+            val tapInteraction = remember { MutableInteractionSource() }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        indication = null,
+                        interactionSource = tapInteraction,
+                        onClick = onPlayerTap,
+                    ),
+            )
+        }
+
         when {
             state.connectionError && !state.drawerOpen -> ConnectionErrorOverlay(onOpenSettings)
             state.prepareProgress != null -> PrepareOverlay(state.prepareProgress)
             state.playbackState is PlaybackState.Idle && state.queue.isEmpty() ->
-                IdleOverlay()
+                IdleOverlay(onOpenMenu = { onToggleDrawer(true) })
         }
 
         val playing = state.playbackState is PlaybackState.Playing ||
@@ -75,12 +100,21 @@ fun PlayerScreen(
             PlayingTopBar(state)
         }
 
-        if (!state.drawerOpen && state.queue.isNotEmpty() && !playing) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
+        if (!state.drawerOpen) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 KaraokeText(
-                    text = "MENU 打开菜单",
-                    style = KaraokeTextStyle.Hint,
-                    modifier = Modifier.padding(24.dp),
+                    text = "菜单",
+                    style = KaraokeTextStyle.Body,
+                    color = KaraokeColors.TextPrimary,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(KaraokeDimens.SpaceLg)
+                        .background(
+                            KaraokeColors.BgElevated.copy(alpha = 0.9f),
+                            RoundedCornerShape(KaraokeDimens.RadiusSm),
+                        )
+                        .clickable { onToggleDrawer(true) }
+                        .padding(horizontal = KaraokeDimens.SpaceMd, vertical = KaraokeDimens.SpaceSm),
                 )
             }
         }
@@ -96,20 +130,24 @@ fun PlayerScreen(
                 onSettingsUrlChange = onSettingsUrlChange,
                 onTestConnection = onTestConnection,
                 onSaveReconnect = onSaveReconnect,
+                onQueueRowTapped = onQueueRowTapped,
+                onQueueActionTapped = onQueueActionTapped,
             )
         }
     }
 }
 
 @Composable
-private fun IdleOverlay() {
-    KaraokeOverlay {
+private fun IdleOverlay(onOpenMenu: () -> Unit) {
+    KaraokeOverlay(
+        modifier = Modifier.clickable(onClick = onOpenMenu),
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             KaraokeText(text = "🎤", style = KaraokeTextStyle.Title)
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(KaraokeDimens.SpaceSm))
             KaraokeText(text = "等待点歌", style = KaraokeTextStyle.Title)
-            Spacer(modifier = Modifier.height(8.dp))
-            KaraokeText(text = "按 MENU 打开点歌菜单", style = KaraokeTextStyle.Hint)
+            Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
+            KaraokeText(text = "点击屏幕或「菜单」打开点歌", style = KaraokeTextStyle.Hint)
         }
     }
 }
@@ -122,7 +160,7 @@ private fun PlayingTopBar(state: PlayerUiState) {
         modifier = Modifier
             .fillMaxWidth()
             .background(KaraokeColors.OverlayDim)
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+            .padding(horizontal = KaraokeDimens.SpaceLg, vertical = KaraokeDimens.SpaceMd),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         KaraokeText(
@@ -138,7 +176,7 @@ private fun PlayingTopBar(state: PlayerUiState) {
             text = if (state.connectionOk) "●" else "○",
             style = KaraokeTextStyle.Body,
             color = if (state.connectionOk) KaraokeColors.Connected else KaraokeColors.Error,
-            modifier = Modifier.padding(start = 12.dp),
+            modifier = Modifier.padding(start = KaraokeDimens.SpaceSm),
         )
     }
 }
@@ -150,13 +188,13 @@ private fun PrepareOverlay(progress: PrepareProgress?) {
     KaraokeOverlay {
         KaraokeCard {
             KaraokeText(text = "准备中", style = KaraokeTextStyle.Title)
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
             KaraokeText(text = progress.displayName, style = KaraokeTextStyle.Hint)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(KaraokeDimens.SpaceMd))
             if (pct != null) {
                 KaraokeLinearProgress(progress = pct)
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
             KaraokeText(
                 text = progress.status?.message ?: "正在准备播放资源…",
                 style = KaraokeTextStyle.Hint,
@@ -170,7 +208,7 @@ private fun ConnectionErrorOverlay(onOpenSettings: () -> Unit) {
     KaraokeOverlay {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             KaraokeText(text = "无法连接服务器", style = KaraokeTextStyle.Title)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(KaraokeDimens.SpaceMd))
             KaraokeButton(text = "打开设置", onClick = onOpenSettings)
         }
     }

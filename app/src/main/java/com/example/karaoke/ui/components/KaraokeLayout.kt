@@ -13,8 +13,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import com.example.karaoke.ui.theme.DesignTokens
 import com.example.karaoke.ui.theme.KaraokeColors
+import com.example.karaoke.ui.theme.KaraokeDimens
+import com.example.karaoke.ui.theme.wdp
 
 @Composable
 fun KaraokeScreen(
@@ -51,9 +53,9 @@ fun KaraokeCard(
 ) {
     Column(
         modifier = modifier
-            .background(KaraokeColors.BgElevated, RoundedCornerShape(12.dp))
-            .border(1.dp, KaraokeColors.BorderSubtle, RoundedCornerShape(12.dp))
-            .padding(32.dp),
+            .background(KaraokeColors.BgElevated, RoundedCornerShape(KaraokeDimens.RadiusMd))
+            .border(KaraokeDimens.Border, KaraokeColors.BorderSubtle, RoundedCornerShape(KaraokeDimens.RadiusMd))
+            .padding(KaraokeDimens.SpaceXl),
         content = content,
     )
 }
@@ -66,7 +68,7 @@ fun KaraokeHintBar(text: String, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxWidth()
             .background(KaraokeColors.BgElevated)
-            .padding(12.dp),
+            .padding(KaraokeDimens.SpaceSm),
     )
 }
 
@@ -75,17 +77,19 @@ fun KaraokeLinearProgress(
     progress: Float,
     modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
+    val trackHeight = wdp(DesignTokens.PROGRESS_HEIGHT)
+    val trackRadius = wdp(DesignTokens.RADIUS_SM - 8f)
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(6.dp)
-            .background(KaraokeColors.BgSecondary, RoundedCornerShape(4.dp)),
+            .height(trackHeight)
+            .background(KaraokeColors.BgSecondary, RoundedCornerShape(trackRadius)),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(progress.coerceIn(0f, 1f))
-                .height(6.dp)
-                .background(KaraokeColors.AccentPrimary, RoundedCornerShape(4.dp)),
+                .height(trackHeight)
+                .background(KaraokeColors.AccentPrimary, RoundedCornerShape(trackRadius)),
         )
     }
 }

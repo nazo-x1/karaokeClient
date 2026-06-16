@@ -18,10 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.example.karaoke.data.remote.dto.QueueItem
 import com.example.karaoke.data.remote.dto.SongItem
 import com.example.karaoke.ui.components.KaraokeActionChip
@@ -32,12 +32,15 @@ import com.example.karaoke.ui.components.KaraokeHintBar
 import com.example.karaoke.ui.components.KaraokeText
 import com.example.karaoke.ui.components.KaraokeTextField
 import com.example.karaoke.ui.components.KaraokeTextStyle
+import com.example.karaoke.ui.components.consumeClicks
 import com.example.karaoke.ui.navigation.DrawerTab
 import com.example.karaoke.ui.navigation.QueueAction
 import com.example.karaoke.ui.navigation.QueueInteractionMode
 import com.example.karaoke.ui.player.PlayerUiState
+import com.example.karaoke.ui.theme.DesignTokens
 import com.example.karaoke.ui.theme.KaraokeColors
 import com.example.karaoke.ui.theme.KaraokeDimens
+import com.example.karaoke.ui.theme.wdp
 
 @Composable
 fun DrawerPanel(
@@ -50,6 +53,8 @@ fun DrawerPanel(
     onSettingsUrlChange: (String) -> Unit,
     onTestConnection: () -> Unit,
     onSaveReconnect: () -> Unit,
+    onQueueRowTapped: (Int) -> Unit,
+    onQueueActionTapped: (QueueAction) -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -66,11 +71,12 @@ fun DrawerPanel(
                 modifier = Modifier
                     .width(KaraokeDimens.DrawerWidth)
                     .fillMaxHeight()
+                    .consumeClicks()
                     .background(KaraokeColors.BgSecondary)
-                    .border(width = 1.dp, color = KaraokeColors.BorderSubtle),
+                    .border(width = KaraokeDimens.Border, color = KaraokeColors.BorderSubtle),
             ) {
                 DrawerTabs(selected = state.drawerTab, onTabSelected = onTabSelected)
-                Box(modifier = Modifier.weight(1f).padding(16.dp)) {
+                Box(modifier = Modifier.weight(1f).padding(KaraokeDimens.SpaceMd)) {
                     when (state.drawerTab) {
                         DrawerTab.Library -> LibraryTabContent(
                             query = state.libraryQuery,
@@ -86,6 +92,8 @@ fun DrawerPanel(
                             focusIndex = state.queueFocusIndex,
                             mode = state.queueMode,
                             action = state.queueAction,
+                            onRowTapped = onQueueRowTapped,
+                            onActionTapped = onQueueActionTapped,
                         )
                         DrawerTab.Settings -> SettingsTabContent(
                             url = state.settingsUrl,
@@ -110,7 +118,7 @@ private fun DrawerTabs(selected: DrawerTab, onTabSelected: (DrawerTab) -> Unit) 
         modifier = Modifier
             .fillMaxWidth()
             .background(KaraokeColors.BgElevated)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = KaraokeDimens.SpaceXs, vertical = wdp(6f)),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         DrawerTab.entries.forEach { tab ->
@@ -121,7 +129,7 @@ private fun DrawerTabs(selected: DrawerTab, onTabSelected: (DrawerTab) -> Unit) 
                 color = if (isSelected) KaraokeColors.AccentPrimary else KaraokeColors.TextSecondary,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 modifier = Modifier
-                    .padding(12.dp)
+                    .padding(KaraokeDimens.SpaceSm)
                     .clickable { onTabSelected(tab) },
             )
         }
@@ -145,13 +153,13 @@ private fun LibraryTabContent(
     onLoadMore: () -> Unit,
     onEnqueue: (Int) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceSm)) {
         KaraokeTextField(
             value = query,
             onValueChange = onQueryChange,
             placeholder = "搜索歌曲",
         )
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs)) {
             itemsIndexed(songs) { _, song ->
                 KaraokeFocusableRow(onClick = { onEnqueue(song.id) }) {
                     KaraokeText(
@@ -165,18 +173,22 @@ private fun LibraryTabContent(
             if (hasMore && !loading) {
                 item {
                     KaraokeText(
-                        text = "滚动加载更多",
+                        text = "点击加载更多",
                         style = KaraokeTextStyle.Hint,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onLoadMore() }
-                            .padding(8.dp),
+                            .padding(KaraokeDimens.SpaceXs),
                     )
                 }
             }
             if (loading) {
                 item {
-                    KaraokeText(text = "加载中…", style = KaraokeTextStyle.Hint, modifier = Modifier.padding(8.dp))
+                    KaraokeText(
+                        text = "加载中…",
+                        style = KaraokeTextStyle.Hint,
+                        modifier = Modifier.padding(KaraokeDimens.SpaceXs),
+                    )
                 }
             }
         }
@@ -189,6 +201,8 @@ private fun QueueTabContent(
     focusIndex: Int,
     mode: QueueInteractionMode,
     action: QueueAction,
+    onRowTapped: (Int) -> Unit,
+    onActionTapped: (QueueAction) -> Unit,
 ) {
     if (queue.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -196,7 +210,7 @@ private fun QueueTabContent(
         }
         return
     }
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs)) {
         itemsIndexed(queue) { index, item ->
             val focused = index == focusIndex
             val borderColor = if (focused) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle
@@ -205,16 +219,17 @@ private fun QueueTabContent(
                     .fillMaxWidth()
                     .background(
                         if (focused) KaraokeColors.BgHover else KaraokeColors.BgElevated,
-                        RoundedCornerShape(8.dp),
+                        RoundedCornerShape(KaraokeDimens.RadiusSm),
                     )
-                    .border(KaraokeDimens.FocusBorder, borderColor, RoundedCornerShape(8.dp))
-                    .padding(12.dp),
+                    .border(KaraokeDimens.FocusBorder, borderColor, RoundedCornerShape(KaraokeDimens.RadiusSm))
+                    .clickable { onRowTapped(index) }
+                    .padding(KaraokeDimens.SpaceSm),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     KaraokeText(
                         text = "${index + 1}.",
                         style = KaraokeTextStyle.Hint,
-                        modifier = Modifier.width(28.dp),
+                        modifier = Modifier.width(wdp(DesignTokens.INDEX_WIDTH)),
                     )
                     KaraokeText(
                         text = item.name,
@@ -232,12 +247,17 @@ private fun QueueTabContent(
                     )
                 }
                 if (focused && mode == QueueInteractionMode.Action && !item.isPlaying()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        KaraokeActionChip(label = "置顶", selected = action == QueueAction.Top)
+                    Spacer(modifier = Modifier.height(KaraokeDimens.SpaceXs))
+                    Row(horizontalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceSm)) {
+                        KaraokeActionChip(
+                            label = "置顶",
+                            selected = action == QueueAction.Top,
+                            onClick = { onActionTapped(QueueAction.Top) },
+                        )
                         KaraokeActionChip(
                             label = "移除",
                             selected = action == QueueAction.Remove,
+                            onClick = { onActionTapped(QueueAction.Remove) },
                             secondary = true,
                         )
                     }
@@ -257,14 +277,14 @@ private fun SettingsTabContent(
     onTest: () -> Unit,
     onSave: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceSm)) {
         KaraokeText(text = "服务器地址", style = KaraokeTextStyle.Hint)
         KaraokeTextField(value = url, onValueChange = onUrlChange)
         KaraokeText(text = "当前：$savedUrl", style = KaraokeTextStyle.Hint)
         if (error != null) {
             KaraokeText(text = error, style = KaraokeTextStyle.Error)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceSm)) {
             KaraokeButton(
                 text = "测试连接",
                 onClick = onTest,
@@ -283,12 +303,12 @@ private fun SettingsTabContent(
 @Composable
 private fun DrawerHintBar(state: PlayerUiState) {
     val hint = when (state.drawerTab) {
-        DrawerTab.Library -> "◀ 关闭 · ◀▶ 切 Tab · OK 点歌"
+        DrawerTab.Library -> "点击遮罩关闭 · 点击歌曲点歌"
         DrawerTab.Queue -> when (state.queueMode) {
-            QueueInteractionMode.Browse -> "◀ 关闭 · ▲▼ 浏览 · OK 操作"
-            QueueInteractionMode.Action -> "◀ 返回 · ◀▶ 切换 · OK 确认"
+            QueueInteractionMode.Browse -> "点击歌曲进入操作 · 点击遮罩关闭"
+            QueueInteractionMode.Action -> "点击置顶/移除 · 再次点击歌曲取消"
         }
-        DrawerTab.Settings -> "◀ 关闭 · OK 保存"
+        DrawerTab.Settings -> "点击遮罩关闭 · 点击按钮保存"
     }
     KaraokeHintBar(text = hint)
 }
