@@ -24,6 +24,7 @@ object DesignTokens {
     const val DRAWER_WIDTH = 630f
     const val SETUP_CARD_WIDTH = 840f
     const val FOCUS_BORDER = 3f
+    const val FOCUS_BORDER_STRONG = 5f
     const val BORDER = 1.5f
 
     const val TEXT_TITLE = 36f
@@ -51,6 +52,7 @@ object KaraokeDimens {
     val DrawerWidth: Dp @Composable get() = wdp(DesignTokens.DRAWER_WIDTH)
     val SetupCardWidth: Dp @Composable get() = wdp(DesignTokens.SETUP_CARD_WIDTH)
     val FocusBorder: Dp @Composable get() = wdp(DesignTokens.FOCUS_BORDER)
+    val FocusBorderStrong: Dp @Composable get() = wdp(DesignTokens.FOCUS_BORDER_STRONG)
     val Border: Dp @Composable get() = wdp(DesignTokens.BORDER)
     val SpaceXs: Dp @Composable get() = wdp(DesignTokens.SPACE_XS)
     val SpaceSm: Dp @Composable get() = wdp(DesignTokens.SPACE_SM)

@@ -11,9 +11,12 @@ import com.example.karaoke.playback.PlaybackEngine
 import com.example.karaoke.playback.PlaybackState
 import com.example.karaoke.playback.PrepareProgress
 import com.example.karaoke.ui.UiMessenger
+import com.example.karaoke.ui.navigation.DrawerFocusZone
 import com.example.karaoke.ui.navigation.DrawerTab
+import com.example.karaoke.ui.navigation.LibraryFocus
 import com.example.karaoke.ui.navigation.QueueAction
 import com.example.karaoke.ui.navigation.QueueInteractionMode
+import com.example.karaoke.ui.navigation.SettingsFocus
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,7 @@ data class PlayerUiState(
     val queue: List<QueueItem> = emptyList(),
     val drawerOpen: Boolean = false,
     val drawerTab: DrawerTab = DrawerTab.Library,
+    val drawerFocusZone: DrawerFocusZone = DrawerFocusZone.Content,
     val overlayVisible: Boolean = true,
     val playbackState: PlaybackState = PlaybackState.Idle,
     val prepareProgress: PrepareProgress? = null,
@@ -37,6 +41,7 @@ data class PlayerUiState(
     val libraryPage: Int = 1,
     val libraryLoading: Boolean = false,
     val libraryHasMore: Boolean = true,
+    val libraryFocusIndex: Int = 0,
     // Queue tab
     val queueFocusIndex: Int = 0,
     val queueMode: QueueInteractionMode = QueueInteractionMode.Browse,
@@ -45,6 +50,7 @@ data class PlayerUiState(
     val settingsUrl: String = "",
     val settingsTesting: Boolean = false,
     val settingsError: String? = null,
+    val settingsFocusIndex: Int = 0,
 )
 
 class PlayerViewModel(
@@ -61,11 +67,23 @@ class PlayerViewModel(
     private var overlayJob: Job? = null
 
     init {
-        playbackEngine.onPlaybackEnded = { onSongEnded() }
+        playbackEngine.onPlaybackEnded = {
+            viewModelScope.launch {
+                runCatching { onSongEnded() }.onFailure {
+                    uiMessenger.show(it.message ?: "切歌失败")
+                }
+            }
+        }
         playbackEngine.onStartedPlaying = { songId ->
-            repository.markSinging(songId)
-            repository.sendCommand(1, "3")
-            refreshQueue()
+            viewModelScope.launch {
+                runCatching {
+                    repository.markSinging(songId)
+                    repository.sendCommand(1, "3")
+                    refreshQueue()
+                }.onFailure {
+                    uiMessenger.show(it.message ?: "同步播放状态失败")
+                }
+            }
         }
         viewModelScope.launch {
             playbackEngine.state.collect { state ->
@@ -117,13 +135,26 @@ class PlayerViewModel(
             state.copy(
                 drawerOpen = newOpen,
                 drawerTab = if (newOpen && !state.drawerOpen) DrawerTab.Library else state.drawerTab,
+                drawerFocusZone = DrawerFocusZone.Content,
+                libraryFocusIndex = 0,
+                settingsFocusIndex = 0,
+                queueFocusIndex = 0,
                 queueMode = QueueInteractionMode.Browse,
             )
         }
     }
 
     fun setDrawerTab(tab: DrawerTab) {
-        _uiState.update { it.copy(drawerTab = tab, queueMode = QueueInteractionMode.Browse) }
+        _uiState.update {
+            it.copy(
+                drawerTab = tab,
+                queueMode = QueueInteractionMode.Browse,
+                drawerFocusZone = DrawerFocusZone.Content,
+                libraryFocusIndex = 0,
+                settingsFocusIndex = 0,
+                queueFocusIndex = 0,
+            )
+        }
         if (tab == DrawerTab.Library && _uiState.value.librarySongs.isEmpty()) {
             loadLibrary(reset = true)
         }
@@ -179,130 +210,189 @@ class PlayerViewModel(
         else -> false
     }
 
-    private fun handleDrawerKey(keyCode: Int, state: PlayerUiState): Boolean = when (state.drawerTab) {
-        DrawerTab.Library -> handleLibraryKey(keyCode, state)
-        DrawerTab.Queue -> handleQueueKey(keyCode, state)
-        DrawerTab.Settings -> handleSettingsKey(keyCode, state)
+    private fun handleDrawerKey(keyCode: Int, state: PlayerUiState): Boolean {
+        if (state.drawerTab == DrawerTab.Queue &&
+            state.queueMode == QueueInteractionMode.Action &&
+            state.queue.isNotEmpty()
+        ) {
+            return handleQueueActionKey(keyCode, state)
+        }
+        return when (keyCode) {
+            android.view.KeyEvent.KEYCODE_BACK -> {
+                toggleDrawer(false)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                cycleTab(forward = false)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                cycleTab(forward = true)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+                moveDrawerFocusUp(state)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+                moveDrawerFocusDown(state)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+            android.view.KeyEvent.KEYCODE_ENTER,
+            -> {
+                activateDrawerFocus(state)
+                true
+            }
+            else -> false
+        }
     }
 
-    private fun handleLibraryKey(keyCode: Int, state: PlayerUiState): Boolean = when (keyCode) {
-        android.view.KeyEvent.KEYCODE_BACK -> {
-            toggleDrawer(false)
+    private fun handleQueueActionKey(keyCode: Int, state: PlayerUiState): Boolean = when (keyCode) {
+        android.view.KeyEvent.KEYCODE_BACK,
+        android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+        -> {
+            cancelQueueAction()
             true
         }
         android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-            cycleTab(forward = true)
+            _uiState.update {
+                it.copy(
+                    queueAction = if (it.queueAction == QueueAction.Top) {
+                        QueueAction.Remove
+                    } else {
+                        QueueAction.Top
+                    },
+                )
+            }
             true
         }
-        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-            cycleTab(forward = false)
+        android.view.KeyEvent.KEYCODE_DPAD_UP -> {
+            _uiState.update {
+                it.copy(queueFocusIndex = (it.queueFocusIndex - 1).coerceAtLeast(0))
+            }
+            true
+        }
+        android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
+            _uiState.update {
+                it.copy(
+                    queueFocusIndex = (it.queueFocusIndex + 1)
+                        .coerceAtMost(it.queue.size - 1),
+                )
+            }
+            true
+        }
+        android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+        android.view.KeyEvent.KEYCODE_ENTER,
+        -> {
+            val item = state.queue.getOrNull(state.queueFocusIndex) ?: return false
+            if (item.isPlaying()) return true
+            executeQueueAction(state.queueAction, item.id)
             true
         }
         else -> false
     }
 
-    private fun handleSettingsKey(keyCode: Int, state: PlayerUiState): Boolean = when (keyCode) {
-        android.view.KeyEvent.KEYCODE_BACK -> {
-            toggleDrawer(false)
-            true
-        }
-        android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-            cycleTab(forward = true)
-            true
-        }
-        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-            cycleTab(forward = false)
-            true
-        }
-        else -> false
-    }
-
-    private fun handleQueueKey(keyCode: Int, state: PlayerUiState): Boolean {
-        if (state.queue.isEmpty()) {
-            return when (keyCode) {
-                android.view.KeyEvent.KEYCODE_BACK,
-                android.view.KeyEvent.KEYCODE_DPAD_LEFT,
-                -> {
-                    toggleDrawer(false)
-                    true
+    private fun moveDrawerFocusUp(state: PlayerUiState) {
+        when (state.drawerFocusZone) {
+            DrawerFocusZone.Tabs -> Unit
+            DrawerFocusZone.Content -> when (state.drawerTab) {
+                DrawerTab.Library -> {
+                    if (state.libraryFocusIndex <= 0) {
+                        _uiState.update { it.copy(drawerFocusZone = DrawerFocusZone.Tabs) }
+                    } else {
+                        _uiState.update { it.copy(libraryFocusIndex = state.libraryFocusIndex - 1) }
+                    }
                 }
-                else -> false
+                DrawerTab.Queue -> {
+                    if (state.queue.isEmpty()) {
+                        _uiState.update { it.copy(drawerFocusZone = DrawerFocusZone.Tabs) }
+                    } else if (state.queueFocusIndex <= 0) {
+                        _uiState.update { it.copy(drawerFocusZone = DrawerFocusZone.Tabs) }
+                    } else {
+                        _uiState.update { it.copy(queueFocusIndex = state.queueFocusIndex - 1) }
+                    }
+                }
+                DrawerTab.Settings -> {
+                    if (state.settingsFocusIndex <= 0) {
+                        _uiState.update { it.copy(drawerFocusZone = DrawerFocusZone.Tabs) }
+                    } else {
+                        _uiState.update { it.copy(settingsFocusIndex = state.settingsFocusIndex - 1) }
+                    }
+                }
             }
         }
-        return when (state.queueMode) {
-            QueueInteractionMode.Browse -> when (keyCode) {
-                android.view.KeyEvent.KEYCODE_BACK,
-                android.view.KeyEvent.KEYCODE_DPAD_LEFT,
-                -> {
-                    toggleDrawer(false)
-                    true
-                }
-                android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                    _uiState.update {
-                        it.copy(queueFocusIndex = (it.queueFocusIndex - 1).coerceAtLeast(0))
+    }
+
+    private fun moveDrawerFocusDown(state: PlayerUiState) {
+        when (state.drawerFocusZone) {
+            DrawerFocusZone.Tabs -> _uiState.update { it.copy(drawerFocusZone = DrawerFocusZone.Content) }
+            DrawerFocusZone.Content -> when (state.drawerTab) {
+                DrawerTab.Library -> {
+                    val max = libraryMaxIndex(state)
+                    if (state.libraryFocusIndex < max) {
+                        _uiState.update { it.copy(libraryFocusIndex = state.libraryFocusIndex + 1) }
                     }
-                    true
                 }
-                android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    _uiState.update {
-                        it.copy(
-                            queueFocusIndex = (it.queueFocusIndex + 1)
-                                .coerceAtMost(it.queue.size - 1),
-                        )
+                DrawerTab.Queue -> {
+                    if (state.queue.isEmpty()) return
+                    val max = state.queue.size - 1
+                    if (state.queueFocusIndex < max) {
+                        _uiState.update { it.copy(queueFocusIndex = state.queueFocusIndex + 1) }
                     }
-                    true
                 }
-                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    cycleTab(forward = true)
-                    true
+                DrawerTab.Settings -> {
+                    if (state.settingsFocusIndex < SettingsFocus.SAVE) {
+                        _uiState.update { it.copy(settingsFocusIndex = state.settingsFocusIndex + 1) }
+                    }
                 }
-                android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-                android.view.KeyEvent.KEYCODE_ENTER,
-                -> {
-                    val item = state.queue.getOrNull(state.queueFocusIndex) ?: return false
-                    if (item.isPlaying()) return true
+            }
+        }
+    }
+
+    private fun activateDrawerFocus(state: PlayerUiState) {
+        when (state.drawerFocusZone) {
+            DrawerFocusZone.Tabs -> _uiState.update { it.copy(drawerFocusZone = DrawerFocusZone.Content) }
+            DrawerFocusZone.Content -> when (state.drawerTab) {
+                DrawerTab.Library -> when (state.libraryFocusIndex) {
+                    LibraryFocus.SEARCH -> Unit
+                    else -> {
+                        val songCount = state.librarySongs.size
+                        if (state.libraryHasMore &&
+                            state.libraryFocusIndex == LibraryFocus.loadMore(songCount)
+                        ) {
+                            loadLibrary(reset = false)
+                        } else {
+                            val songIndex = state.libraryFocusIndex - 1
+                            state.librarySongs.getOrNull(songIndex)?.let { enqueueSong(it.id) }
+                        }
+                    }
+                }
+                DrawerTab.Queue -> {
+                    val item = state.queue.getOrNull(state.queueFocusIndex) ?: return
+                    if (item.isPlaying()) return
                     _uiState.update {
                         it.copy(
                             queueMode = QueueInteractionMode.Action,
                             queueAction = QueueAction.Top,
                         )
                     }
-                    true
                 }
-                else -> false
-            }
-            QueueInteractionMode.Action -> when (keyCode) {
-                android.view.KeyEvent.KEYCODE_BACK -> {
-                    _uiState.update { it.copy(queueMode = QueueInteractionMode.Browse) }
-                    true
+                DrawerTab.Settings -> when (state.settingsFocusIndex) {
+                    SettingsFocus.TEST -> testConnection()
+                    SettingsFocus.SAVE -> saveAndReconnect()
+                    else -> Unit
                 }
-                android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    _uiState.update { it.copy(queueMode = QueueInteractionMode.Browse) }
-                    true
-                }
-                android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    _uiState.update {
-                        it.copy(
-                            queueAction = if (it.queueAction == QueueAction.Top) {
-                                QueueAction.Remove
-                            } else {
-                                QueueAction.Top
-                            },
-                        )
-                    }
-                    true
-                }
-                android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-                android.view.KeyEvent.KEYCODE_ENTER,
-                -> {
-                    val item = state.queue.getOrNull(state.queueFocusIndex) ?: return false
-                    if (item.isPlaying()) return true
-                    executeQueueAction(state.queueAction, item.id)
-                    true
-                }
-                else -> false
             }
         }
+    }
+
+    private fun libraryMaxIndex(state: PlayerUiState): Int {
+        val count = LibraryFocus.itemCount(
+            songCount = state.librarySongs.size,
+            hasMore = state.libraryHasMore && !state.libraryLoading,
+        )
+        return (count - 1).coerceAtLeast(0)
     }
 
     private fun cycleTab(forward: Boolean) {
@@ -310,7 +400,17 @@ class PlayerViewModel(
             val tabs = DrawerTab.entries
             val idx = tabs.indexOf(state.drawerTab)
             val next = if (forward) (idx + 1) % tabs.size else (idx - 1 + tabs.size) % tabs.size
-            state.copy(drawerTab = tabs[next], queueMode = QueueInteractionMode.Browse)
+            state.copy(
+                drawerTab = tabs[next],
+                queueMode = QueueInteractionMode.Browse,
+                drawerFocusZone = DrawerFocusZone.Content,
+                libraryFocusIndex = 0,
+                settingsFocusIndex = 0,
+                queueFocusIndex = 0,
+            )
+        }
+        if (_uiState.value.drawerTab == DrawerTab.Library && _uiState.value.librarySongs.isEmpty()) {
+            loadLibrary(reset = true)
         }
     }
 
@@ -395,11 +495,16 @@ class PlayerViewModel(
             result.fold(
                 onSuccess = { songs ->
                     _uiState.update { state ->
-                        state.copy(
-                            librarySongs = if (reset) songs else state.librarySongs + songs,
+                        val merged = if (reset) songs else state.librarySongs + songs
+                        val next = state.copy(
+                            librarySongs = merged,
                             libraryPage = page,
                             libraryHasMore = songs.isNotEmpty(),
                             libraryLoading = false,
+                        )
+                        next.copy(
+                            libraryFocusIndex = next.libraryFocusIndex
+                                .coerceAtMost(libraryMaxIndex(next)),
                         )
                     }
                 },

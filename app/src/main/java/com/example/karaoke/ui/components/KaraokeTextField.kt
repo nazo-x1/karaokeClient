@@ -25,15 +25,21 @@ fun KaraokeTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     singleLine: Boolean = true,
+    selected: Boolean = false,
     onSubmit: (() -> Unit)? = null,
 ) {
+    val shape = RoundedCornerShape(KaraokeDimens.RadiusSm)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .background(KaraokeColors.BgElevated, RoundedCornerShape(KaraokeDimens.RadiusSm))
-            .border(KaraokeDimens.Border, KaraokeColors.BorderSubtle, RoundedCornerShape(KaraokeDimens.RadiusSm))
+            .background(KaraokeColors.BgElevated, shape)
+            .border(
+                width = if (selected) KaraokeDimens.FocusBorderStrong else KaraokeDimens.Border,
+                color = if (selected) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle,
+                shape = shape,
+            )
             .padding(horizontal = KaraokeDimens.SpaceMd, vertical = KaraokeDimens.SpaceSm),
         textStyle = TextStyle(
             color = KaraokeColors.TextPrimary,

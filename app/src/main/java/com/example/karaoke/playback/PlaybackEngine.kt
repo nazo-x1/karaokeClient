@@ -52,6 +52,8 @@ class PlaybackEngine(
     private var isVideoReady = false
     private var isVocalsReady = false
     private var isAccReady = false
+    private var playersReleased = false
+    private var isLoadingMedia = false
     var pendingAutoPlay = false
         private set
     var prepareWaitSongId = -1
@@ -59,14 +61,20 @@ class PlaybackEngine(
 
     private val engineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    var onPlaybackEnded: (suspend () -> Unit)? = null
-    var onStartedPlaying: (suspend (Int) -> Unit)? = null
+    var onPlaybackEnded: (() -> Unit)? = null
+    var onStartedPlaying: ((Int) -> Unit)? = null
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val syncRunnable = object : Runnable {
         override fun run() {
+            if (playersReleased || isLoadingMedia) {
+                mainHandler.postDelayed(this, 250)
+                return
+            }
             if (playbackMode == MODE_ENHANCED &&
                 ::videoPlayer.isInitialized &&
+                ::vocalsPlayer.isInitialized &&
+                ::accPlayer.isInitialized &&
                 videoPlayer.isPlaying && vocalsPlayer.isPlaying
             ) {
                 val diff = videoPlayer.currentPosition - vocalsPlayer.currentPosition
@@ -111,6 +119,7 @@ class PlaybackEngine(
 
     fun release() {
         prepareWaitSongId = -1
+        playersReleased = true
         mainHandler.removeCallbacks(syncRunnable)
         if (::videoPlayer.isInitialized) videoPlayer.release()
         if (::vocalsPlayer.isInitialized) vocalsPlayer.release()
@@ -220,27 +229,32 @@ class PlaybackEngine(
         val videoUrl = repository.streamUrl(song.id, "video")
 
         withContext(Dispatchers.Main) {
-            pendingAutoPlay = autoPlay
-            resetReadyFlags()
-            videoPlayer.pause()
-            vocalsPlayer.pause()
-            accPlayer.pause()
-            if (playbackMode == MODE_PLAIN) {
-                videoPlayer.volume = 1.0f
-                isVocalsReady = true
-                isAccReady = true
-                videoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
-                videoPlayer.prepare()
-            } else {
-                videoPlayer.volume = 0f
-                videoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
-                vocalsPlayer.setMediaItem(MediaItem.fromUri(repository.streamUrl(song.id, "vocals")))
-                accPlayer.setMediaItem(MediaItem.fromUri(repository.streamUrl(song.id, "accompaniment")))
-                videoPlayer.prepare()
-                vocalsPlayer.prepare()
-                accPlayer.prepare()
+            isLoadingMedia = true
+            try {
+                pendingAutoPlay = autoPlay
+                resetReadyFlags()
+                videoPlayer.pause()
+                vocalsPlayer.pause()
+                accPlayer.pause()
+                if (playbackMode == MODE_PLAIN) {
+                    videoPlayer.volume = 1.0f
+                    isVocalsReady = true
+                    isAccReady = true
+                    videoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
+                    videoPlayer.prepare()
+                } else {
+                    videoPlayer.volume = 0f
+                    videoPlayer.setMediaItem(MediaItem.fromUri(videoUrl))
+                    vocalsPlayer.setMediaItem(MediaItem.fromUri(repository.streamUrl(song.id, "vocals")))
+                    accPlayer.setMediaItem(MediaItem.fromUri(repository.streamUrl(song.id, "accompaniment")))
+                    videoPlayer.prepare()
+                    vocalsPlayer.prepare()
+                    accPlayer.prepare()
+                }
+                _state.value = PlaybackState.Ready(song.id, song.name)
+            } finally {
+                isLoadingMedia = false
             }
-            _state.value = PlaybackState.Ready(song.id, song.name)
         }
     }
 
@@ -378,7 +392,7 @@ class PlaybackEngine(
             .build()
 
         val renderersFactory = DefaultRenderersFactory(context)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
             .setEnableDecoderFallback(true)
 
         videoPlayer = ExoPlayer.Builder(context, renderersFactory)
@@ -419,9 +433,12 @@ class PlaybackEngine(
                             isVocalsReady = false
                             isAccReady = false
                         }
-                        val ended = onPlaybackEnded
-                        if (ended != null) {
-                            engineScope.launch(Dispatchers.IO) { ended() }
+                        onPlaybackEnded?.let { callback ->
+                            try {
+                                callback()
+                            } catch (e: Exception) {
+                                Log.e("KTV", "onPlaybackEnded failed", e)
+                            }
                         }
                     }
                 }
@@ -433,9 +450,13 @@ class PlaybackEngine(
                         if (!vocalsPlayer.isPlaying) vocalsPlayer.playWhenReady = true
                         if (!accPlayer.isPlaying) accPlayer.playWhenReady = true
                     }
-                    val callback = onStartedPlaying
-                    if (callback != null) {
-                        engineScope.launch(Dispatchers.IO) { callback(currentSongId) }
+                    onStartedPlaying?.let { callback ->
+                        val songId = currentSongId
+                        try {
+                            callback(songId)
+                        } catch (e: Exception) {
+                            Log.e("KTV", "onStartedPlaying failed", e)
+                        }
                     }
                     _state.value = PlaybackState.Playing(currentSongId, "")
                 } else if (videoPlayer.playbackState != Player.STATE_ENDED && currentSongId > 0) {

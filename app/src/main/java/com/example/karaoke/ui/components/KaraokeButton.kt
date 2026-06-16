@@ -35,6 +35,7 @@ fun KaraokeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    selected: Boolean = false,
     variant: KaraokeButtonVariant = KaraokeButtonVariant.Primary,
 ) {
     val containerColor = when (variant) {
@@ -44,6 +45,7 @@ fun KaraokeButton(
     val shape = RoundedCornerShape(KaraokeDimens.RadiusSm)
     val interactionSource = remember { MutableInteractionSource() }
     var focused by remember { mutableStateOf(false) }
+    val showStrongBorder = selected || focused
     Box(
         modifier = modifier
             .clip(shape)
@@ -53,8 +55,8 @@ fun KaraokeButton(
                 shape = shape,
             )
             .border(
-                width = if (focused) KaraokeDimens.FocusBorder else KaraokeDimens.Border,
-                color = if (focused) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle,
+                width = if (showStrongBorder) KaraokeDimens.FocusBorderStrong else KaraokeDimens.Border,
+                color = if (showStrongBorder) KaraokeColors.AccentPrimary else KaraokeColors.BorderSubtle,
                 shape = shape,
             )
             .clickable(
