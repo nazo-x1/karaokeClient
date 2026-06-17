@@ -4,6 +4,7 @@ import com.example.karaoke.data.prefs.SettingsStore
 import com.example.karaoke.data.remote.KaraokeApi
 import com.example.karaoke.data.remote.SseClient
 import com.example.karaoke.data.remote.dto.EnqueueResponse
+import com.example.karaoke.data.remote.dto.LibraryPage
 import com.example.karaoke.data.remote.dto.PlaybackData
 import com.example.karaoke.data.remote.dto.PrepareStatus
 import com.example.karaoke.data.remote.dto.QueueItem
@@ -54,7 +55,7 @@ class KaraokeRepository(
         result
     }
 
-    suspend fun loadLibrary(page: Int, q: String): Result<List<SongItem>> =
+    suspend fun loadLibrary(page: Int, q: String): Result<LibraryPage> =
         withContext(Dispatchers.IO) { api.fetchLibrary(page, q) }
 
     suspend fun enqueue(songId: Int): Result<EnqueueResponse> =
@@ -72,8 +73,8 @@ class KaraokeRepository(
     suspend fun fetchPrepareStatus(songId: Int): Result<PrepareStatus?> =
         withContext(Dispatchers.IO) { api.fetchPrepareStatus(songId) }
 
-    suspend fun ensureReady(songId: Int): Result<PrepareStatus?> =
-        withContext(Dispatchers.IO) { api.postEnsureReady(songId) }
+    suspend fun schedulePrepare(songId: Int): Result<PrepareStatus?> =
+        withContext(Dispatchers.IO) { api.schedulePrepare(songId) }
 
     suspend fun markSinging(songId: Int): Result<Unit> =
         withContext(Dispatchers.IO) { api.markSinging(songId) }

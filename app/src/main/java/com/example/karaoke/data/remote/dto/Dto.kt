@@ -32,6 +32,7 @@ data class SongItem(
     val source_origin: String? = null,
     val playback_mode: String? = null,
     val can_queue: Boolean = true,
+    val prepare: PrepareStatus? = null,
 )
 
 data class PrepareStatus(

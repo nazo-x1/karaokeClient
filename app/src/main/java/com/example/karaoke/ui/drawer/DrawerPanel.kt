@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.example.karaoke.ui.components.LaunchedEffectFocusScroll
-import com.example.karaoke.ui.components.PrepareProgressBanner
+import com.example.karaoke.ui.components.PrepareInline
+import com.example.karaoke.ui.components.isPrepareActive
+import com.example.karaoke.ui.components.isPrepareFailed
 import com.example.karaoke.ui.navigation.RandomFocus
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -43,6 +45,7 @@ import com.example.karaoke.ui.navigation.QueueAction
 import com.example.karaoke.ui.navigation.QueueInteractionMode
 import com.example.karaoke.ui.navigation.SettingsFocus
 import com.example.karaoke.ui.player.PlayerUiState
+import com.example.karaoke.ui.player.PrepareTrack
 import com.example.karaoke.ui.theme.DesignTokens
 import com.example.karaoke.ui.theme.KaraokeColors
 import com.example.karaoke.ui.theme.KaraokeDimens
@@ -87,17 +90,12 @@ fun DrawerPanel(
                     focusZone = state.drawerFocusZone,
                     onTabSelected = onTabSelected,
                 )
-                if (state.prepareTracks.isNotEmpty()) {
-                    PrepareProgressBanner(
-                        tracks = state.prepareTracks,
-                        modifier = Modifier.padding(horizontal = KaraokeDimens.SpaceMd, vertical = KaraokeDimens.SpaceXs),
-                    )
-                }
                 Box(modifier = Modifier.weight(1f).padding(horizontal = KaraokeDimens.SpaceMd)) {
                     when (state.drawerTab) {
                         DrawerTab.Library -> LibraryTabContent(
                             query = state.libraryQuery,
                             songs = state.librarySongs,
+                            prepareMap = state.prepareMap,
                             loading = state.libraryLoading,
                             hasMore = state.libraryHasMore,
                             focusIndex = state.libraryFocusIndex,
@@ -108,6 +106,7 @@ fun DrawerPanel(
                         )
                         DrawerTab.Random -> RandomTabContent(
                             songs = state.randomSongs,
+                            prepareMap = state.prepareMap,
                             loading = state.randomLoading,
                             focusIndex = state.randomFocusIndex,
                             contentFocused = state.drawerFocusZone == DrawerFocusZone.Content,
@@ -204,6 +203,7 @@ private val DrawerTab.label: String
 private fun LibraryTabContent(
     query: String,
     songs: List<SongItem>,
+    prepareMap: Map<Int, PrepareTrack>,
     loading: Boolean,
     hasMore: Boolean,
     focusIndex: Int,
@@ -237,17 +237,16 @@ private fun LibraryTabContent(
             verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs),
         ) {
             itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                KaraokeFocusableRow(
+                val prepare = prepareMap[song.id]?.status ?: song.prepare
+                val preparing = prepare != null && (isPrepareActive(prepare) || isPrepareFailed(prepare))
+                SongListRow(
+                    title = song.display_name,
+                    prepare = prepare,
                     selected = contentFocused && focusIndex == LibraryFocus.songRow(index),
-                    onClick = { onEnqueue(song.id, song.display_name) },
-                ) {
-                    KaraokeText(
-                        text = song.display_name,
-                        style = KaraokeTextStyle.List,
-                        modifier = Modifier.weight(1f),
-                    )
-                    KaraokeText(text = "+ 点歌", style = KaraokeTextStyle.Body, color = KaraokeColors.AccentPrimary)
-                }
+                    actionLabel = if (preparing) "准备中" else "+ 点歌",
+                    actionEnabled = !preparing && song.can_queue,
+                    onClick = { if (!preparing && song.can_queue) onEnqueue(song.id, song.display_name) },
+                )
             }
             if (hasMore && !loading) {
                 item {
@@ -300,6 +299,7 @@ private fun LibraryTabContent(
 @Composable
 private fun RandomTabContent(
     songs: List<SongItem>,
+    prepareMap: Map<Int, PrepareTrack>,
     loading: Boolean,
     focusIndex: Int,
     contentFocused: Boolean,
@@ -331,17 +331,16 @@ private fun RandomTabContent(
             verticalArrangement = Arrangement.spacedBy(KaraokeDimens.SpaceXs),
         ) {
             itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                KaraokeFocusableRow(
+                val prepare = prepareMap[song.id]?.status ?: song.prepare
+                val preparing = prepare != null && (isPrepareActive(prepare) || isPrepareFailed(prepare))
+                SongListRow(
+                    title = song.display_name,
+                    prepare = prepare,
                     selected = contentFocused && focusIndex == RandomFocus.songRow(index),
-                    onClick = { onEnqueue(song.id, song.display_name) },
-                ) {
-                    KaraokeText(
-                        text = song.display_name,
-                        style = KaraokeTextStyle.List,
-                        modifier = Modifier.weight(1f),
-                    )
-                    KaraokeText(text = "+ 点歌", style = KaraokeTextStyle.Body, color = KaraokeColors.AccentPrimary)
-                }
+                    actionLabel = if (preparing) "准备中" else "+ 点歌",
+                    actionEnabled = !preparing && song.can_queue,
+                    onClick = { if (!preparing && song.can_queue) onEnqueue(song.id, song.display_name) },
+                )
             }
             if (!loading && songs.isEmpty()) {
                 item {
@@ -506,4 +505,33 @@ private fun DrawerHintBar(state: PlayerUiState) {
         }
     }
     KaraokeHintBar(text = hint)
+}
+
+@Composable
+private fun SongListRow(
+    title: String,
+    prepare: com.example.karaoke.data.remote.dto.PrepareStatus?,
+    selected: Boolean,
+    actionLabel: String,
+    actionEnabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Column {
+        KaraokeFocusableRow(
+            selected = selected,
+            onClick = { if (actionEnabled) onClick() },
+        ) {
+            KaraokeText(
+                text = title,
+                style = KaraokeTextStyle.List,
+                modifier = Modifier.weight(1f),
+            )
+            KaraokeText(
+                text = actionLabel,
+                style = KaraokeTextStyle.Body,
+                color = if (actionEnabled) KaraokeColors.AccentPrimary else KaraokeColors.TextSecondary,
+            )
+        }
+        PrepareInline(prepare = prepare, modifier = Modifier.padding(horizontal = KaraokeDimens.SpaceSm))
+    }
 }

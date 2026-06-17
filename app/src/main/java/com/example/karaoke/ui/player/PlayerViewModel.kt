@@ -49,8 +49,8 @@ data class PlayerUiState(
     val randomSongs: List<SongItem> = emptyList(),
     val randomLoading: Boolean = false,
     val randomFocusIndex: Int = 0,
-    // Prepare tracking (点歌后资源准备)
-    val prepareTracks: List<PrepareTrack> = emptyList(),
+    // Prepare tracking (点歌后资源准备，按歌曲 id 展示)
+    val prepareMap: Map<Int, PrepareTrack> = emptyMap(),
     // Queue tab
     val queueFocusIndex: Int = 0,
     val queueMode: QueueInteractionMode = QueueInteractionMode.Browse,
@@ -81,12 +81,17 @@ class PlayerViewModel(
     private var sseJob: Job? = null
     private var overlayJob: Job? = null
     private var preparePollJob: Job? = null
+    private var librarySearchJob: Job? = null
+    private var libraryRequestId = 0
     private var libraryPool: List<SongItem> = emptyList()
     private var randomSeed: Int = 0
 
     companion object {
         private const val RANDOM_PICK_COUNT = 12
         private const val LIBRARY_POOL_MAX_PAGES = 5
+        /** 焦点接近列表底部时提前加载下一页 */
+        private const val LIBRARY_PREFETCH_THRESHOLD = 5
+        private const val LIBRARY_SEARCH_DEBOUNCE_MS = 400L
     }
 
     init {
@@ -367,7 +372,9 @@ class PlayerViewModel(
                 DrawerTab.Library -> {
                     val max = libraryMaxIndex(state)
                     if (state.libraryFocusIndex < max) {
-                        _uiState.update { it.copy(libraryFocusIndex = state.libraryFocusIndex + 1) }
+                        val next = state.libraryFocusIndex + 1
+                        _uiState.update { it.copy(libraryFocusIndex = next) }
+                        maybePrefetchLibrary(next)
                     }
                 }
                 DrawerTab.Random -> {
@@ -491,9 +498,10 @@ class PlayerViewModel(
         val merged = mutableListOf<SongItem>()
         var page = 1
         repeat(LIBRARY_POOL_MAX_PAGES) {
-            val songs = repository.loadLibrary(page, "").getOrElse { emptyList() }
-            if (songs.isEmpty()) return@repeat
-            merged.addAll(songs)
+            val pageResult = repository.loadLibrary(page, "").getOrNull() ?: return@repeat
+            if (pageResult.songs.isEmpty()) return@repeat
+            merged.addAll(pageResult.songs)
+            if (!pageResult.hasMore) return@repeat
             page += 1
         }
         libraryPool = merged
@@ -501,12 +509,16 @@ class PlayerViewModel(
 
     private fun recomputeRandomSongs() {
         val pool = libraryPool.filter { it.can_queue }.shuffled(java.util.Random(randomSeed.toLong()))
+        val picked = pool.take(RANDOM_PICK_COUNT)
         _uiState.update {
-            it.copy(
-                randomSongs = pool.take(RANDOM_PICK_COUNT),
-                randomFocusIndex = it.randomFocusIndex.coerceAtMost(
-                    (RandomFocus.itemCount(pool.take(RANDOM_PICK_COUNT).size) - 1).coerceAtLeast(0),
+            mergePrepareFromSongs(
+                it.copy(
+                    randomSongs = picked,
+                    randomFocusIndex = it.randomFocusIndex.coerceAtMost(
+                        (RandomFocus.itemCount(picked.size) - 1).coerceAtLeast(0),
+                    ),
                 ),
+                picked,
             )
         }
     }
@@ -580,25 +592,32 @@ class PlayerViewModel(
 
     fun updateLibraryQuery(q: String) {
         _uiState.update { it.copy(libraryQuery = q) }
-        loadLibrary(reset = true)
+        librarySearchJob?.cancel()
+        librarySearchJob = viewModelScope.launch {
+            delay(LIBRARY_SEARCH_DEBOUNCE_MS)
+            loadLibrary(reset = true)
+        }
     }
 
     fun loadLibrary(reset: Boolean) {
+        val state = _uiState.value
+        if (!reset && (!state.libraryHasMore || state.libraryLoading)) return
+        val page = if (reset) 1 else state.libraryPage + 1
+        val requestId = ++libraryRequestId
         viewModelScope.launch {
-            val page = if (reset) 1 else _uiState.value.libraryPage + 1
-            if (!reset && !_uiState.value.libraryHasMore) return@launch
             _uiState.update { it.copy(libraryLoading = true) }
             val result = repository.loadLibrary(page, _uiState.value.libraryQuery)
+            if (requestId != libraryRequestId) return@launch
             result.fold(
-                onSuccess = { songs ->
-                    _uiState.update { state ->
-                        val merged = if (reset) songs else state.librarySongs + songs
-                        val next = state.copy(
+                onSuccess = { pageResult ->
+                    _uiState.update { current ->
+                        val merged = if (reset) pageResult.songs else current.librarySongs + pageResult.songs
+                        val next = current.copy(
                             librarySongs = merged,
                             libraryPage = page,
-                            libraryHasMore = songs.isNotEmpty(),
+                            libraryHasMore = pageResult.hasMore,
                             libraryLoading = false,
-                        )
+                        ).let { mergePrepareFromSongs(it, pageResult.songs) }
                         next.copy(
                             libraryFocusIndex = next.libraryFocusIndex
                                 .coerceAtMost(libraryMaxIndex(next)),
@@ -610,6 +629,20 @@ class PlayerViewModel(
                     uiMessenger.show(it.message ?: "加载曲库失败")
                 },
             )
+        }
+    }
+
+    private fun maybePrefetchLibrary(focusIndex: Int) {
+        val state = _uiState.value
+        if (state.drawerTab != DrawerTab.Library || !state.libraryHasMore || state.libraryLoading) return
+        val songCount = state.librarySongs.size
+        if (songCount == 0) return
+        val onLoadMore = focusIndex == LibraryFocus.loadMore(songCount)
+        val nearBottom = focusIndex >= LibraryFocus.songRow(
+            (songCount - LIBRARY_PREFETCH_THRESHOLD).coerceAtLeast(0),
+        )
+        if (onLoadMore || nearBottom) {
+            loadLibrary(reset = false)
         }
     }
 
@@ -654,12 +687,22 @@ class PlayerViewModel(
     }
 
     private fun trackPrepare(songId: Int, displayName: String, initial: PrepareStatus) {
+        if (!isPrepareActive(initial) && initial.status != "failed") return
         _uiState.update { state ->
-            val tracks = state.prepareTracks
-                .filterNot { it.songId == songId }
-                .plus(PrepareTrack(songId, displayName, initial))
-            state.copy(prepareTracks = tracks)
+            val track = PrepareTrack(songId, displayName, initial)
+            state.copy(prepareMap = state.prepareMap + (songId to track))
         }
+    }
+
+    private fun mergePrepareFromSongs(state: PlayerUiState, songs: List<SongItem>): PlayerUiState {
+        var map = state.prepareMap
+        songs.forEach { song ->
+            val prep = song.prepare ?: return@forEach
+            if (isPrepareActive(prep) || prep.status == "failed") {
+                map = map + (song.id to PrepareTrack(song.id, song.display_name, prep))
+            }
+        }
+        return state.copy(prepareMap = map)
     }
 
     private fun refreshPrepareTrack(songId: Int) {
@@ -667,14 +710,14 @@ class PlayerViewModel(
             repository.fetchPrepareStatus(songId).onSuccess { status ->
                 if (status == null) return@onSuccess
                 _uiState.update { state ->
-                    val existing = state.prepareTracks.find { it.songId == songId } ?: return@update state
+                    val existing = state.prepareMap[songId] ?: return@update state
                     val updated = existing.copy(status = status)
-                    val tracks = if (status.ready || status.status in setOf("failed", "not_needed")) {
-                        state.prepareTracks.filterNot { it.songId == songId }
+                    val map = if (status.ready || status.status in setOf("failed", "not_needed")) {
+                        state.prepareMap - songId
                     } else {
-                        state.prepareTracks.map { if (it.songId == songId) updated else it }
+                        state.prepareMap + (songId to updated)
                     }
-                    state.copy(prepareTracks = tracks)
+                    state.copy(prepareMap = map)
                 }
                 if (status.ready) {
                     uiMessenger.show("播放资源已就绪，可再次点歌")
@@ -688,7 +731,7 @@ class PlayerViewModel(
         preparePollJob = viewModelScope.launch {
             while (true) {
                 delay(1500)
-                val active = _uiState.value.prepareTracks.filter { isPrepareActive(it.status) }
+                val active = _uiState.value.prepareMap.values.filter { isPrepareActive(it.status) }
                 if (active.isEmpty()) continue
                 active.forEach { track -> refreshPrepareTrack(track.songId) }
             }

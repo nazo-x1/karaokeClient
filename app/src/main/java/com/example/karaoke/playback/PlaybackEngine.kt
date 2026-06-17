@@ -281,7 +281,7 @@ class PlaybackEngine(
 
     private suspend fun waitUntilStreamReady(songId: Int, displayName: String): Boolean {
         prepareWaitSongId = songId
-        withContext(Dispatchers.IO) { repository.ensureReady(songId) }
+        withContext(Dispatchers.IO) { repository.schedulePrepare(songId) }
         val deadline = System.currentTimeMillis() + 3_600_000L
         while (System.currentTimeMillis() < deadline) {
             if (prepareWaitSongId != songId) return false

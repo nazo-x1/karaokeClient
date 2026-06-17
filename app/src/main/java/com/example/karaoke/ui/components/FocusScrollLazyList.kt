@@ -15,6 +15,6 @@ fun LaunchedEffectFocusScroll(
     LaunchedEffect(focusIndex, contentFocused) {
         if (!contentFocused) return@LaunchedEffect
         val lazyIndex = lazyIndexForFocus(focusIndex) ?: return@LaunchedEffect
-        listState.animateScrollToItem(lazyIndex.coerceAtLeast(0))
+        listState.scrollToItem(lazyIndex.coerceAtLeast(0))
     }
 }

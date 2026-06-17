@@ -2,6 +2,7 @@ package com.example.karaoke.data.remote
 
 import com.example.karaoke.data.remote.dto.ApiEnvelope
 import com.example.karaoke.data.remote.dto.ApiResult
+import com.example.karaoke.data.remote.dto.LibraryPage
 import com.example.karaoke.data.remote.dto.EnqueueResponse
 import com.example.karaoke.data.remote.dto.EnqueueResult
 import com.example.karaoke.data.remote.dto.PlaybackData
@@ -71,14 +72,21 @@ class KaraokeApi(
 
     fun fetchQueue(): Result<List<QueueItem>> = apiGet("/queue")
 
-    fun fetchLibrary(page: Int, q: String): Result<List<SongItem>> {
+    fun fetchLibrary(page: Int, q: String, pageSize: Int = LIBRARY_PAGE_SIZE): Result<LibraryPage> {
         val request = Request.Builder()
-            .url(apiV1("/library/songs?page=$page&q=${q.encode()}"))
+            .url(apiV1("/library/songs?page=$page&q=${q.encode()}&page_size=$pageSize"))
             .build()
         return execute(request) { body ->
             val res = parse<List<SongItem>>(body) ?: return@execute null
             if (res.code != 0) throw Exception(res.msg ?: "加载曲库失败")
-            res.data ?: emptyList()
+            val songs = res.data ?: emptyList()
+            val totalPage = res.totalPage ?: 0
+            val currentPage = res.page ?: page
+            val hasMore = when {
+                totalPage > 0 -> currentPage < totalPage
+                else -> songs.size >= pageSize
+            }
+            LibraryPage(songs, hasMore)
         }
     }
 
@@ -125,7 +133,7 @@ class KaraokeApi(
 
     fun fetchPrepareStatus(songId: Int): Result<PrepareStatus?> {
         val request = Request.Builder()
-            .url(apiV1("/playback/songs/$songId/prepare-status"))
+            .url(apiV1("/playback/songs/$songId/prepare"))
             .build()
         return execute(request) { body ->
             val res = parse<PrepareStatus>(body) ?: return@execute null
@@ -134,9 +142,9 @@ class KaraokeApi(
         }
     }
 
-    fun postEnsureReady(songId: Int): Result<PrepareStatus?> {
+    fun schedulePrepare(songId: Int): Result<PrepareStatus?> {
         val request = Request.Builder()
-            .url(apiV1("/playback/songs/$songId/ensure-ready"))
+            .url(apiV1("/playback/songs/$songId/prepare"))
             .post(byteArrayOf().toRequestBody(null))
             .build()
         return execute(request) { body ->
@@ -221,6 +229,8 @@ class KaraokeApi(
     }
 
     companion object {
+        const val LIBRARY_PAGE_SIZE = 40
+
         fun createDefaultClient(): OkHttpClient = OkHttpClient.Builder()
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)
